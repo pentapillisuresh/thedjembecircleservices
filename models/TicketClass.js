@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
       discountPercentage: { type: DataTypes.FLOAT, defaultValue: 0 },
       totalTickets: { type: DataTypes.INTEGER, allowNull: false },
       availableTickets: { type: DataTypes.INTEGER, allowNull: false },
-      eventId: { type: DataTypes.INTEGER, allowNull: false },
+      eventId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'Events', key: 'id' }},
     });
     return TicketClass;
   };

@@ -1,5 +1,5 @@
 const bcrypt = require('bcryptjs');
-const { Event, TicketClass, User, Order, OrderItem, Admin, sequelize,Gallery } = require('../models');
+const { Event, TicketClass, User, Order, OrderItem, Admin, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // ==================== DASHBOARD ====================
@@ -545,16 +545,9 @@ exports.changeAdminPin = async (req, res) => {
  * Create a new gallery item (image/video).
  * Body: { eventId (optional), mediaType, mediaUrl, caption }
  */
-// ==================== GALLERY MANAGEMENT ====================
-
-/**
- * POST /api/admin/gallery
- * Create a new gallery item (image/video).
- * Body: { eventId (optional), mediaType, galleryType, mediaUrl, caption }
- */
 exports.createGalleryItem = async (req, res) => {
   try {
-    const { eventId, mediaType, galleryType, mediaUrl, caption } = req.body;
+    const { eventId, mediaType, mediaUrl, caption } = req.body;
 
     if (!mediaType || !mediaUrl) {
       return res.failure('mediaType and mediaUrl are required', 400);
@@ -563,71 +556,17 @@ exports.createGalleryItem = async (req, res) => {
       return res.failure('mediaType must be "image" or "video"', 400);
     }
 
-    // Set galleryType based on eventId if not provided
-    let finalGalleryType = galleryType;
-    if (!finalGalleryType) {
-      finalGalleryType = eventId ? 'event' : 'others';
-    }
-
-    // Validate galleryType
-    if (!['event', 'others'].includes(finalGalleryType)) {
-      return res.failure('galleryType must be "event" or "others"', 400);
-    }
-
     // If eventId provided, verify event exists
     if (eventId) {
       const event = await Event.findByPk(eventId);
       if (!event) return res.failure('Event not found', 404);
     }
 
-    // Create gallery item with all required fields
-    const item = await Gallery.create({ 
-      eventId: eventId || null,
-      mediaType, 
-      galleryType: finalGalleryType,
-      mediaUrl, 
-      caption: caption || null
-    });
-    
+    const item = await Gallery.create({ eventId, mediaType, mediaUrl, caption });
     res.success(item, 'Gallery item created', 201);
   } catch (error) {
     console.error('Create gallery item error:', error);
     res.failure('Failed to create gallery item', 500);
-  }
-};
-
-/**
- * PUT /api/admin/gallery/:id
- * Update a gallery item (caption, mediaType, mediaUrl, eventId, galleryType).
- */
-exports.updateGalleryItem = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { eventId, mediaType, galleryType, mediaUrl, caption } = req.body;
-
-    const item = await Gallery.findByPk(id);
-    if (!item) return res.failure('Gallery item not found', 404);
-
-    if (eventId && eventId !== item.eventId) {
-      const event = await Event.findByPk(eventId);
-      if (!event) return res.failure('Event not found', 404);
-    }
-
-    // Prepare update data
-    const updateData = {};
-    if (mediaType) updateData.mediaType = mediaType;
-    if (galleryType && ['event', 'others'].includes(galleryType)) {
-      updateData.galleryType = galleryType;
-    }
-    if (mediaUrl) updateData.mediaUrl = mediaUrl;
-    if (caption !== undefined) updateData.caption = caption;
-    if (eventId !== undefined) updateData.eventId = eventId || null;
-
-    await item.update(updateData);
-    res.success(item, 'Gallery item updated');
-  } catch (error) {
-    console.error('Update gallery item error:', error);
-    res.failure('Failed to update gallery item', 500);
   }
 };
 
@@ -669,6 +608,31 @@ exports.getGalleryItem = async (req, res) => {
   } catch (error) {
     console.error('Get gallery item error:', error);
     res.failure('Failed to fetch gallery item', 500);
+  }
+};
+
+/**
+ * PUT /api/admin/gallery/:id
+ * Update a gallery item (caption, mediaType, mediaUrl, eventId).
+ */
+exports.updateGalleryItem = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { eventId, mediaType, mediaUrl, caption } = req.body;
+
+    const item = await Gallery.findByPk(id);
+    if (!item) return res.failure('Gallery item not found', 404);
+
+    if (eventId && eventId !== item.eventId) {
+      const event = await Event.findByPk(eventId);
+      if (!event) return res.failure('Event not found', 404);
+    }
+
+    await item.update({ eventId, mediaType, mediaUrl, caption });
+    res.success(item, 'Gallery item updated');
+  } catch (error) {
+    console.error('Update gallery item error:', error);
+    res.failure('Failed to update gallery item', 500);
   }
 };
 

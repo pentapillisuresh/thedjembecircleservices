@@ -6,8 +6,8 @@ module.exports = (sequelize, DataTypes) => {
             primaryKey: true,
             autoIncrement: true
         },
-    userId: { type: DataTypes.INTEGER, allowNull: false,references: { model: 'users', key: 'id' } },
-    eventId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'events', key: 'id' }},
+    userId: { type: DataTypes.INTEGER, allowNull: false,references: { model: 'Users', key: 'id' } },
+    eventId: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'Events', key: 'id' }},
     totalAmount: { type: DataTypes.FLOAT, allowNull: false },
     status: { type: DataTypes.ENUM('pending','paid','failed','refunded'), defaultValue: 'pending' },
     razorpayOrderId: DataTypes.STRING,

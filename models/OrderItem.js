@@ -8,7 +8,7 @@ module.exports = (sequelize, DataTypes) => {
       ticketClassId: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        references: { model: 'ticketClasses', key: 'id' }
+        references: { model: 'TicketClasses', key: 'id' }
       },
       quantity: {
         type: DataTypes.INTEGER,
