@@ -25,6 +25,8 @@ app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/gallery', require('./routes/galleryRoutes'));
+app.use('/api/blog', require('./routes/blogRoutes'));
+app.use('/api/lead', require('./routes/leadRoutes'));
 
 // 4. Global error handler – must be LAST!
 app.use((err, req, res, next) => {

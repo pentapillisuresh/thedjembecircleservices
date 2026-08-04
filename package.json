@@ -22,6 +22,7 @@
     "razorpay": "^2.9.8",
     "sequelize": "^6.37.8",
     "sharp": "^0.35.3",
+    "slugify": "^1.6.9",
     "twilio": "^6.0.2"
   },
   "devDependencies": {

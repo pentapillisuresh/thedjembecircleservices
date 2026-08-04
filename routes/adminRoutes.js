@@ -85,4 +85,19 @@ router.get('/gallery/:id', adminController.getGalleryItem);
 router.put('/gallery/:id', adminController.updateGalleryItem);
 router.delete('/gallery/:id', adminController.deleteGalleryItem);
 router.put('/gallery/:id/toggle', adminController.toggleGalleryActive);
+
+// ==================== BLOG MANAGEMENT ====================
+router.post('/blog', adminController.createBlog); // or blogController.createBlog
+router.get('/blog', adminController.listAllBlogs);
+router.get('/blog/:id', adminController.getBlogById);
+router.put('/blog/:id', adminController.updateBlog);
+router.delete('/blog/:id', adminController.deleteBlog);
+
+// ==================== LEAD MANAGEMENT ====================
+router.get('/leads', adminController.listLeads);
+router.get('/leads/:id', adminController.getLead);
+router.put('/leads/:id', adminController.updateLead);
+router.delete('/leads/:id', adminController.deleteLead);
 module.exports = router;
+
+

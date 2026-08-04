@@ -409,9 +409,9 @@ exports.listOrders = async (req, res) => {
     const orders = await Order.findAndCountAll({
       where,
       include: [
-        { model: User, as: 'user', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'User', attributes: ['id', 'name', 'phone'] },
         { model: Event, as: 'event', attributes: ['id', 'title'] },
-        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClasses' }] }
+        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClass' }] }
       ],
       order: [['createdAt', 'DESC']],
       limit: parseInt(limit),
@@ -439,9 +439,9 @@ exports.getOrderDetailsAdmin = async (req, res) => {
     const { id } = req.params;
     const order = await Order.findByPk(id, {
       include: [
-        { model: User, as: 'user', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'User', attributes: ['id', 'name', 'phone'] },
         { model: Event, as: 'event', attributes: ['id', 'title', 'date'] },
-        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClasses' }] }
+        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClass' }] }
       ]
     });
     if (!order) {
@@ -667,5 +667,227 @@ exports.toggleGalleryActive = async (req, res) => {
   } catch (error) {
     console.error('Toggle gallery active error:', error);
     res.failure('Failed to toggle gallery status', 500);
+  }
+};
+
+/**
+ * POST /api/admin/blog
+ * Create a new blog post
+ */
+exports.createBlog = async (req, res) => {
+  try {
+    const { title, content, excerpt, featuredImage, author, tags, status } = req.body;
+    if (!title || !content) {
+      return res.failure('Title and content are required', 400);
+    }
+    const slug = slugify(title, { lower: true, strict: true });
+    // check uniqueness
+    const existing = await Blog.findOne({ where: { slug } });
+    if (existing) {
+      return res.failure('A blog with this title already exists', 409);
+    }
+    const blog = await Blog.create({
+      title,
+      slug,
+      content,
+      excerpt: excerpt || content.substring(0, 200),
+      featuredImage,
+      author: author || 'Admin',
+      tags,
+      status: status || 'draft',
+      publishedAt: status === 'published' ? new Date() : null,
+    });
+    res.success(blog, 'Blog created', 201);
+  } catch (error) {
+    console.error('Create blog error:', error);
+    res.failure('Failed to create blog', 500);
+  }
+};
+
+/**
+ * PUT /api/admin/blog/:id
+ * Update a blog post
+ */
+exports.updateBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, content, excerpt, featuredImage, author, tags, status } = req.body;
+    const blog = await Blog.findByPk(id);
+    if (!blog) {
+      return res.failure('Blog not found', 404);
+    }
+    const updateData = { content, excerpt, featuredImage, author, tags, status };
+    if (title && title !== blog.title) {
+      const slug = slugify(title, { lower: true, strict: true });
+      const existing = await Blog.findOne({ where: { slug, id: { [Op.ne]: id } } });
+      if (existing) {
+        return res.failure('Another blog with this title exists', 409);
+      }
+      updateData.title = title;
+      updateData.slug = slug;
+    }
+    if (status === 'published' && blog.status !== 'published') {
+      updateData.publishedAt = new Date();
+    }
+    await blog.update(updateData);
+    res.success(blog, 'Blog updated');
+  } catch (error) {
+    console.error('Update blog error:', error);
+    res.failure('Failed to update blog', 500);
+  }
+};
+
+/**
+ * DELETE /api/admin/blog/:id
+ * Delete a blog post
+ */
+exports.deleteBlog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const blog = await Blog.findByPk(id);
+    if (!blog) {
+      return res.failure('Blog not found', 404);
+    }
+    await blog.destroy();
+    res.success(null, 'Blog deleted');
+  } catch (error) {
+    console.error('Delete blog error:', error);
+    res.failure('Failed to delete blog', 500);
+  }
+};
+
+/**
+ * GET /api/admin/blog
+ * List all blogs (admin view, all statuses)
+ */
+exports.listAllBlogs = async (req, res) => {
+  try {
+    const { limit = 10, offset = 0, status } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    const blogs = await Blog.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+    res.success({
+      total: blogs.count,
+      blogs: blogs.rows,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+  } catch (error) {
+    console.error('List all blogs error:', error);
+    res.failure('Failed to fetch blogs', 500);
+  }
+};
+
+/**
+ * GET /api/admin/blog/:id
+ * Get a single blog by ID (admin)
+ */
+exports.getBlogById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const blog = await Blog.findByPk(id);
+    if (!blog) {
+      return res.failure('Blog not found', 404);
+    }
+    res.success(blog);
+  } catch (error) {
+    console.error('Get blog by id error:', error);
+    res.failure('Failed to fetch blog', 500);
+  }
+};
+
+/**
+ * GET /api/admin/leads
+ * List all leads with filters (status, search)
+ */
+exports.listLeads = async (req, res) => {
+  try {
+    const { status, search, limit = 10, offset = 0 } = req.query;
+    const where = {};
+    if (status) where.status = status;
+    if (search) {
+      where[Op.or] = [
+        { name: { [Op.like]: `%${search}%` } },
+        { email: { [Op.like]: `%${search}%` } },
+        { phone: { [Op.like]: `%${search}%` } },
+      ];
+    }
+    const leads = await Lead.findAndCountAll({
+      where,
+      order: [['createdAt', 'DESC']],
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+    res.success({
+      total: leads.count,
+      leads: leads.rows,
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+    });
+  } catch (error) {
+    console.error('List leads error:', error);
+    res.failure('Failed to fetch leads', 500);
+  }
+};
+
+/**
+ * GET /api/admin/leads/:id
+ * Get a single lead
+ */
+exports.getLead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lead = await Lead.findByPk(id);
+    if (!lead) {
+      return res.failure('Lead not found', 404);
+    }
+    res.success(lead);
+  } catch (error) {
+    console.error('Get lead error:', error);
+    res.failure('Failed to fetch lead', 500);
+  }
+};
+
+/**
+ * PUT /api/admin/leads/:id
+ * Update lead status and notes
+ */
+exports.updateLead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, notes } = req.body;
+    const lead = await Lead.findByPk(id);
+    if (!lead) {
+      return res.failure('Lead not found', 404);
+    }
+    await lead.update({ status, notes });
+    res.success(lead, 'Lead updated');
+  } catch (error) {
+    console.error('Update lead error:', error);
+    res.failure('Failed to update lead', 500);
+  }
+};
+
+/**
+ * DELETE /api/admin/leads/:id
+ * Delete a lead
+ */
+exports.deleteLead = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const lead = await Lead.findByPk(id);
+    if (!lead) {
+      return res.failure('Lead not found', 404);
+    }
+    await lead.destroy();
+    res.success(null, 'Lead deleted');
+  } catch (error) {
+    console.error('Delete lead error:', error);
+    res.failure('Failed to delete lead', 500);
   }
 };

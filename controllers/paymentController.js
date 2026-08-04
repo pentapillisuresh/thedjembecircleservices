@@ -19,7 +19,7 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
   try {
     const order = await Order.findByPk(orderId, {
       include: [
-        { model: User, as: 'user' },
+        { model: User, as: 'User' },
         { model: Event, as: 'event' }
       ],
       transaction: t
@@ -64,7 +64,7 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
     if (isWhatsAppEnabled) {
       try {
         await whatsappService.sendTicketConfirmation(
-          order.user.phone,
+          order.User.phone,
           order,
           order.event
         );
@@ -72,7 +72,7 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
         console.error('WhatsApp error (non-blocking):', waError);
       }
     } else {
-      console.log(`[WHATSAPP DISABLED] Confirmation for order ${order.id} would be sent to ${order.user.phone}`);
+      console.log(`[WHATSAPP DISABLED] Confirmation for order ${order.id} would be sent to ${order.User.phone}`);
     }
 
     return order;
@@ -209,8 +209,7 @@ exports.verifyPayment = async (req, res) => {
     }
 
     // Mark order as paid
-    await markOrderAsPaid(order.id, razorpay_payment_id);
-
+   await markOrderAsPaid(order.id, razorpay_payment_id);
     res.success({
       verified: true,
       orderId: order.id

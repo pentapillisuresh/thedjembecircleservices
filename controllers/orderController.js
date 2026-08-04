@@ -99,16 +99,18 @@ exports.createOrder = async (req, res) => {
     // Fetch created order with items
     const createdOrder = await Order.findByPk(order.id, {
       include: [
-        { model: User, as: 'user', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'User', attributes: ['id', 'name', 'phone'] },
         { model: Event, as: 'event' },
-        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClasses' }] }
+        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClass' }] }
       ]
     });
 
     res.success(createdOrder, 'Order created successfully. Proceed to payment.', 201);
   } catch (error) {
-    await t.rollback();
-    console.error('createOrder error:', error);
+    if (!t.finished) {
+      await t.rollback();
+    }
+        console.error('createOrder error:', error);
     res.failure('Failed to create order', 500);
   }
 };
@@ -125,9 +127,9 @@ exports.getOrder = async (req, res) => {
 
     const order = await Order.findByPk(orderId, {
       include: [
-        { model: User, as: 'user', attributes: ['id', 'name', 'phone'] },
+        { model: User, as: 'User', attributes: ['id', 'name', 'phone'] },
         { model: Event, as: 'event' },
-        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClasses' }] }
+        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClass' }] }
       ]
     });
 
