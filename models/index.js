@@ -9,6 +9,8 @@ const TicketClass = require('./TicketClass')(sequelize, Sequelize.DataTypes);
 const Order = require('./Order')(sequelize, Sequelize.DataTypes);
 const OrderItem = require('./OrderItem')(sequelize, Sequelize.DataTypes);
 const Gallery = require('./Gallery')(sequelize, Sequelize.DataTypes); // <-- new
+const Blog = require('./Blog')(sequelize, Sequelize.DataTypes); // <-- new
+const Lead = require('./Lead')(sequelize, Sequelize.DataTypes); // <-- new
 
 // Define associations
 // Event <-> TicketClass
@@ -65,8 +67,10 @@ const db = {
   User,
   Admin,
   Event,
+  Lead,
   TicketClass,
   Order,
+  Blog,
   OrderItem,
   Gallery
 };
