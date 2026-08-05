@@ -1,5 +1,6 @@
 const { Order, OrderItem, TicketClass, Event, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
+const razorpayService = require('../services/razorpayService');
 
 /**
  * POST /api/orders/create
@@ -182,5 +183,58 @@ exports.cancelOrder = async (req, res) => {
   } catch (error) {
     console.error('cancelOrder error:', error);
     res.failure('Failed to cancel order', 500);
+  }
+};
+
+/**
+ * POST /api/orders/:orderId/refund
+ * User requests a refund for a paid order (only if event date > 3 days away).
+ */
+exports.requestRefund = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+
+    const order = await Order.findByPk(orderId, {
+      include: [{ model: Event, as: 'event' }],
+    });
+    if (!order) {
+      return res.failure('Order not found', 404);
+    }
+    if (order.userId !== userId) {
+      return res.failure('Unauthorized', 403);
+    }
+    if (order.status !== 'paid') {
+      return res.failure('Only paid orders can be refunded', 400);
+    }
+
+    const eventDate = new Date(order.event.date);
+    const now = new Date();
+    const daysDiff = (eventDate - now) / (1000 * 60 * 60 * 24);
+    if (daysDiff <= 3) {
+      return res.failure('Refund can only be requested more than 3 days before the event', 400);
+    }
+
+    // Process refund via Razorpay
+    if (!order.razorpayPaymentId) {
+      return res.failure('No payment ID found for this order', 400);
+    }
+
+    const refund = await razorpayService.refundPayment(
+      order.razorpayPaymentId,
+      order.totalAmount,
+      `Refund requested by user ${userId}`
+    );
+
+    // Update order status to refunded
+    await order.update({ status: 'refunded' });
+
+    // Optionally restore ticket availability (if needed)
+    // ...
+
+    res.success(refund, 'Refund processed successfully');
+  } catch (error) {
+    console.error('User refund error:', error);
+    res.failure(error.message || 'Refund failed', 500);
   }
 };

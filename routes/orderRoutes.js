@@ -19,4 +19,7 @@ router.get('/:orderId', orderController.getOrder);
 // @desc    Cancel an order (if not paid yet)
 router.put('/:orderId/cancel', orderController.cancelOrder);
 
+// User refund request (authenticated)
+router.post('/:orderId/refund', authenticate, orderController.requestRefund);
+
 module.exports = router;
