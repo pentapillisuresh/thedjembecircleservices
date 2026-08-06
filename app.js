@@ -1,22 +1,37 @@
 require('dotenv').config();
+
 const express = require('express');
-const cors = require('./middleware/cors');
+const cors = require('cors');
 const responseFormatter = require('./middleware/responseFormatter');
 const { sequelize } = require('./models');
 const adminSeeder = require('./seeders/adminSeeder');
 
 const app = express();
 
-// 1. Global middleware (executed in order)
-app.use(cors);
+/**
+ * CORS - Allow all origins
+ */
+app.use(cors());
+
+/**
+ * Parse Request Body
+ */
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(responseFormatter);        // adds res.success / res.failure
 
-// 2. Serve static files (for uploaded images/videos)
+/**
+ * Response Formatter
+ */
+app.use(responseFormatter);
+
+/**
+ * Serve Uploaded Files
+ */
 app.use('/uploads', express.static('uploads'));
 
-// 3. Routes (all endpoints)
+/**
+ * API Routes
+ */
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/events', require('./routes/eventRoutes'));
 app.use('/api/orders', require('./routes/orderRoutes'));
@@ -28,19 +43,50 @@ app.use('/api/gallery', require('./routes/galleryRoutes'));
 app.use('/api/blog', require('./routes/blogRoutes'));
 app.use('/api/lead', require('./routes/leadRoutes'));
 
-// 4. Global error handler – must be LAST!
-app.use((err, req, res, next) => {
-  console.error('Global error:', err.stack);
-  // res.failure is available because responseFormatter ran earlier
-  res.failure('Internal Server Error', 500);
+/**
+ * Health Check
+ */
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'API is running successfully'
+  });
 });
 
-// 5. Sync database and seed admin
-sequelize.sync({ alter: true })
-  .then(() => {
-    adminSeeder();
-    console.log('✅ Database synced and admin seeded');
+/**
+ * 404 Route
+ */
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: 'Route not found'
+  });
+});
+
+/**
+ * Global Error Handler
+ */
+app.use((err, req, res, next) => {
+  console.error('Global Error:', err);
+
+  res.status(err.status || 500).json({
+    success: false,
+    message: err.message || 'Internal Server Error'
+  });
+});
+
+/**
+ * Database Sync & Seed Admin
+ */
+sequelize
+  .sync({ alter: true })
+  .then(async () => {
+    await adminSeeder();
+    console.log('✅ Database synced successfully');
+    console.log('✅ Admin seeded successfully');
   })
-  .catch(err => console.error('DB sync error:', err));
+  .catch((err) => {
+    console.error('Database Sync Error:', err);
+  });
 
 module.exports = app;
