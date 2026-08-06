@@ -1,33 +1,52 @@
-require('dotenv').config();
+const axios = require("axios");
+require("dotenv").config();
 
 /**
- * Send WhatsApp confirmation (mock if disabled)
+ * Send WhatsApp Ticket using Iconic Solution API
  */
-exports.sendTicketConfirmation = async (phone, order, event) => {
-  const enabled = process.env.WHATSAPP_ENABLED === 'true';
-
-  const message = `🎫 Booking confirmed! Event: ${event.title}, Total: ₹${order.totalAmount}. Thank you!`;
+exports.sendTicketConfirmation = async (
+  phone,
+  customerName,
+  pdfUrl
+) => {
+  const enabled = process.env.WHATSAPP_ENABLED === "true";
 
   if (!enabled) {
-    console.log(`[WHATSAPP DISABLED] Would send to ${phone}: ${message}`);
-    return Promise.resolve();
+    console.log(
+      `[WHATSAPP DISABLED] Would send ticket to ${phone}`
+    );
+    return;
   }
 
-  // Real implementation (Twilio) – only runs if enabled
   try {
-    const twilio = require('twilio');
-    const client = twilio(
-      process.env.TWILIO_ACCOUNT_SID,
-      process.env.TWILIO_AUTH_TOKEN
+
+    console.log("========== WhatsApp Request ==========");
+    console.log("Phone:", phone);
+    console.log("Customer Name:", customerName);
+    console.log("PDF URL:", pdfUrl);
+    console.log("=====================================");
+    const response = await axios.get(
+      "http://wa.iconicsolution.co.in/wapp/api/v2/send/bytemplate",
+      {
+        params: {
+          apikey: process.env.WHATSAPP_API_KEY,
+          templatename: "ticket_booking",
+          mobile: phone,
+          dvariables: customerName,
+          pdf: pdfUrl,
+        },
+      }
     );
-    await client.messages.create({
-      body: message,
-      from: `whatsapp:${process.env.TWILIO_WHATSAPP_NUMBER}`,
-      to: `whatsapp:${phone}`
-    });
-    console.log(`WhatsApp sent to ${phone}`);
+
+    console.log("WhatsApp Sent Successfully");
+    console.log(response.data);
+
+    return response.data;
   } catch (error) {
-    console.error('WhatsApp error:', error);
+    console.error(
+      "WhatsApp Error:",
+      error.response?.data || error.message
+    );
     throw error;
   }
 };

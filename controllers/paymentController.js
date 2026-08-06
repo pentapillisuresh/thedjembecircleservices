@@ -1,5 +1,6 @@
 const razorpayService = require('../services/razorpayService');
 const whatsappService = require('../services/whatsappService');
+const ticketPdfService = require("../services/ticketPdfService");
 const { Order, OrderItem, TicketClass, Event, User, sequelize } = require('../models');
 const { Op } = require('sequelize');
 require('dotenv').config();
@@ -63,11 +64,13 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
     // Send WhatsApp confirmation (if enabled)
     if (isWhatsAppEnabled) {
       try {
-        await whatsappService.sendTicketConfirmation(
-          order.User.phone,
-          order,
-          order.event
-        );
+    const pdfUrl = await ticketPdfService.generateTicket(order);
+
+await whatsappService.sendTicketConfirmation(
+    order.User.phone,
+    order.User.name,
+    pdfUrl
+);
       } catch (waError) {
         console.error('WhatsApp error (non-blocking):', waError);
       }
