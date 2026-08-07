@@ -183,6 +183,23 @@ Please carry this ticket while attending the event.
   });
 
   await browser.close();
+  const pdfBuffer = fs.readFileSync(filePath);
 
-  return `https://thedjembecircle.com/uploads/tickets/${fileName}`;
+ const pdfUrl = `https://service.thedjembecircle.com/uploads/tickets/${fileName}`;
+const pdfBase64 = pdfBuffer.toString("base64");
+
+console.log("==================================");
+console.log("PDF GENERATED");
+console.log("File Name :", fileName);
+console.log("File Path :", filePath);
+console.log("PDF URL   :", pdfUrl);
+console.log("Base64 Length :", pdfBase64.length);
+console.log("Base64 Preview :", pdfBase64.substring(0,100));
+console.log("==================================");
+
+return {
+    fileName,
+    pdfUrl,
+    pdfBase64
+};
 };

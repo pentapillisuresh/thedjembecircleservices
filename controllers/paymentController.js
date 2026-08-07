@@ -64,12 +64,12 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
     // Send WhatsApp confirmation (if enabled)
     if (isWhatsAppEnabled) {
       try {
-    const pdfUrl = await ticketPdfService.generateTicket(order);
+const ticket = await ticketPdfService.generateTicket(order);
 
 await whatsappService.sendTicketConfirmation(
     order.User.phone,
     order.User.name,
-    pdfUrl
+    ticket
 );
       } catch (waError) {
         console.error('WhatsApp error (non-blocking):', waError);
