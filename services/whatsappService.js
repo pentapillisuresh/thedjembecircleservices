@@ -32,7 +32,7 @@ const response = await axios.post(
     mobile: phone,
     dvariables: [customerName],
     medianame: ticket.fileName,
-    media: ticket.pdfBase64
+    media: ticket.pdfUrl
   },
   {
     headers: {

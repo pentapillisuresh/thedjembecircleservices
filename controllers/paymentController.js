@@ -64,13 +64,13 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
     // Send WhatsApp confirmation (if enabled)
     if (isWhatsAppEnabled) {
       try {
-const ticket = await ticketPdfService.generateTicket(order);
+        const ticket = await ticketPdfService.generateTicket(order);
 
-await whatsappService.sendTicketConfirmation(
-    order.User.phone,
-    order.User.name,
-    ticket
-);
+        await whatsappService.sendTicketConfirmation(
+          order.User.phone,
+          order.User.name,
+          ticket
+        );
       } catch (waError) {
         console.error('WhatsApp error (non-blocking):', waError);
       }
@@ -142,7 +142,7 @@ exports.createRazorpayOrder = async (req, res) => {
         mock: true
       }, 'Mock Razorpay order created');
     }
-
+    console.log("orderId::", orderId);
     // REAL MODE
     const razorpayOrder = await razorpayService.createOrder(
       order.totalAmount,
@@ -150,7 +150,7 @@ exports.createRazorpayOrder = async (req, res) => {
       `order_${orderId}`,
       { orderId: order.id, userId: order.userId }
     );
-
+    console.log("razorpayOrder::", razorpayOrder);
     await order.update({ razorpayOrderId: razorpayOrder.id });
 
     res.success({
@@ -212,7 +212,7 @@ exports.verifyPayment = async (req, res) => {
     }
 
     // Mark order as paid
-   await markOrderAsPaid(order.id, razorpay_payment_id);
+    await markOrderAsPaid(order.id, razorpay_payment_id);
     res.success({
       verified: true,
       orderId: order.id

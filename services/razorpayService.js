@@ -33,7 +33,9 @@ exports.createOrder = async (amount, currency = 'INR', receipt, notes = {}) => {
       receipt,
       notes
     };
+    console.log("options::",options)
     const order = await razorpay.orders.create(options);
+    console.log("Razorpay order::",order)
     return order;
   } catch (error) {
     console.error('Razorpay create order error:', error.response?.data || error.message);
