@@ -25,18 +25,24 @@ exports.sendTicketConfirmation = async (
     console.log("Base64 Preview:", ticket.pdfBase64.substring(0,100));
     console.log("=====================================");
 
-   const response = await axios.get(
-    "http://wa.iconicsolution.co.in/wapp/api/v2/send/bytemplate",
-    {
-        params: {
-            apikey: process.env.WHATSAPP_API_KEY,
-            templatename: "ticket_booking",
-            mobile: phone,
-            dvariables: customerName,
-            pdf: ticket.pdfUrl
-        }
+const response = await axios.post(
+  "https://wa.iconicsolution.co.in/wapp/api/v2/send/bytemplate/json",
+  {
+    templatename: "ticket_booking",
+    mobile: phone,
+    dvariables: [customerName],
+    medianame: ticket.fileName,
+    media: ticket.pdfBase64
+  },
+  {
+    headers: {
+      "Content-Type": "application/json",
+      "X-API-KEY": process.env.WHATSAPP_API_KEY || "4dcc9ac74ef84b2d9a83f40a3a4c5233"
     }
+  }
 );
+
+console.log(response.data);
 
     console.log("WhatsApp Sent Successfully");
     console.log(response.data);
