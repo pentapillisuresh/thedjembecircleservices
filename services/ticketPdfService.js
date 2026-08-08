@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
-const puppeteer = require("puppeteer");
+const PDFDocument = require("pdfkit");    // npm install pdfkit
 
 exports.generateTicket = async (order) => {
+  // Ensure the upload directory exists
   const folder = path.join(__dirname, "../uploads/tickets");
-
   if (!fs.existsSync(folder)) {
     fs.mkdirSync(folder, { recursive: true });
   }
@@ -12,194 +12,98 @@ exports.generateTicket = async (order) => {
   const fileName = `TICKET_${order.id}.pdf`;
   const filePath = path.join(folder, fileName);
 
-  const html = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
+  // Create a new PDF document (A4, with margins)
+  const doc = new PDFDocument({ size: "A4", margin: 50 });
 
-<style>
+  // Prepare a write stream and a buffer to capture the PDF data
+  const writeStream = fs.createWriteStream(filePath);
+  const chunks = [];
 
-body{
-    margin:0;
-    background:#f3f3f3;
-    font-family:Arial,Helvetica,sans-serif;
-}
+  return new Promise((resolve, reject) => {
+    // Collect PDF data chunks for Base64 encoding later
+    doc.on("data", (chunk) => chunks.push(chunk));
+    doc.on("end", () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      const pdfBase64 = pdfBuffer.toString("base64");
+      const pdfUrl = `https://service.thedjembecircle.com/uploads/tickets/${fileName}`;
 
-.ticket{
+      console.log("==================================");
+      console.log("PDF GENERATED");
+      console.log("File Name :", fileName);
+      console.log("File Path :", filePath);
+      console.log("PDF URL   :", pdfUrl);
+      console.log("Base64 Length :", pdfBase64.length);
+      console.log("Base64 Preview :", pdfBase64.substring(0, 100));
+      console.log("==================================");
 
-    width:760px;
-    margin:30px auto;
-    background:#fff;
-    border-radius:10px;
-    overflow:hidden;
-    border:2px solid #FD9A00;
+      resolve({
+        fileName,
+        pdfUrl,
+        pdfBase64,
+      });
+    });
 
-}
+    doc.on("error", (err) => {
+      reject(err);
+    });
 
-.header{
+    // Pipe the PDF to both the write stream and the data collector
+    doc.pipe(writeStream);
 
-    background:#FD9A00;
-    color:#fff;
-    text-align:center;
-    padding:20px;
+    // ------------------------------------------------------------
+    // Design the ticket using PDFKit drawing and text methods
+    // ------------------------------------------------------------
 
-}
+    // 1. Draw a decorative border
+    doc.rect(30, 30, 555, 792)              // A4: 595.28 x 841.89 points (with margins 30)
+      .stroke("#2c3e50");
 
-.header h1{
+    // 2. Title
+    doc.fontSize(28)
+      .fillColor("#2980b9")
+      .text("TICKET", 50, 70, { align: "center" });
 
-    margin:0;
-    font-size:30px;
+    // 3. Separator line
+    doc.moveTo(50, 120)
+      .lineTo(565, 120)
+      .stroke("#2980b9");
 
-}
+    // 4. Order details
+    doc.fontSize(14)
+      .fillColor("#333333");
 
-.header p{
+    const details = [
+      { label: "Order ID", value: order.id || "N/A" },
+      { label: "Event", value: order.eventName || order.event || "Not specified" },
+      { label: "Customer", value: order.customerName || order.customer || "Guest" },
+      { label: "Date", value: order.eventDate || order.date || "TBD" },
+      { label: "Seat", value: order.seatNumber || order.seat || "General Admission" },
+    ];
 
-    margin:8px 0 0;
+    let yPos = 160;
+    details.forEach(({ label, value }) => {
+      doc.font("Helvetica-Bold")
+        .text(`${label}:`, 50, yPos, { continued: true })
+        .font("Helvetica")
+        .text(` ${value}`, { align: "left" });
+      yPos += 30;
+    });
 
-}
+    // 5. Additional note (same as original HTML)
+    doc.fontSize(12)
+      .fillColor("#7f8c8d")
+      .text("Please carry this ticket while attending the event.", 50, yPos + 40, {
+        align: "center",
+        width: 500,
+      });
 
-.content{
+    // 6. Footer with a subtle barcode-like line (optional)
+    doc.moveTo(50, 780)
+      .lineTo(565, 780)
+      .dash(5, { space: 5 })
+      .stroke("#bdc3c7");
 
-    padding:30px;
-
-}
-
-.row{
-
-    display:flex;
-    justify-content:space-between;
-    padding:12px 0;
-    border-bottom:1px solid #ddd;
-
-}
-
-.label{
-
-    font-weight:bold;
-
-}
-
-.footer{
-
-    background:#111;
-    color:#fff;
-    text-align:center;
-    padding:18px;
-    font-size:14px;
-
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="ticket">
-
-<div class="header">
-
-<h1>The Djembe Circle</h1>
-
-<p>Booking Confirmation</p>
-
-</div>
-
-<div class="content">
-
-<div class="row">
-<div class="label">Booking ID</div>
-<div>#${order.id}</div>
-</div>
-
-<div class="row">
-<div class="label">Name</div>
-<div>${order.User.name}</div>
-</div>
-
-<div class="row">
-<div class="label">Phone</div>
-<div>${order.User.phone}</div>
-</div>
-
-<div class="row">
-<div class="label">Event</div>
-<div>${order.event.title}</div>
-</div>
-
-<div class="row">
-<div class="label">Venue</div>
-<div>${order.event.venue}</div>
-</div>
-
-<div class="row">
-<div class="label">Date & Time</div>
-<div>${new Date(order.event.date).toLocaleString("en-IN", {
-  dateStyle: "medium",
-  timeStyle: "short",
-})}</div>
-</div>
-
-<div class="row">
-<div class="label">Amount Paid</div>
-<div>₹${order.totalAmount}</div>
-</div>
-
-<div class="row">
-<div class="label">Payment ID</div>
-<div>${order.razorpayPaymentId || "-"}</div>
-</div>
-
-</div>
-
-<div class="footer">
-
-Please carry this ticket while attending the event.
-
-</div>
-
-</div>
-
-</body>
-</html>
-`;
-
-  const browser = await puppeteer.launch({
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    // End the PDF document (this triggers the 'end' event)
+    doc.end();
   });
-
-  const page = await browser.newPage();
-
-  await page.setContent(html, {
-    waitUntil: "networkidle0",
-  });
-
-  await page.pdf({
-    path: filePath,
-    format: "A4",
-    printBackground: true,
-  });
-
-  await browser.close();
-  const pdfBuffer = fs.readFileSync(filePath);
-
- const pdfUrl = `https://service.thedjembecircle.com/uploads/tickets/${fileName}`;
-const pdfBase64 = pdfBuffer.toString("base64");
-
-console.log("==================================");
-console.log("PDF GENERATED");
-console.log("File Name :", fileName);
-console.log("File Path :", filePath);
-console.log("PDF URL   :", pdfUrl);
-console.log("Base64 Length :", pdfBase64.length);
-console.log("Base64 Preview :", pdfBase64.substring(0,100));
-console.log("==================================");
-
-return {
-    fileName,
-    pdfUrl,
-    pdfBase64
-};
 };
