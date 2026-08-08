@@ -23,13 +23,18 @@ exports.sendTicketConfirmation = async (
     console.log("File Name:", ticket.fileName);
     console.log("Base64 Length:", ticket.pdfBase64.length);
     console.log("Base64 Preview:", ticket.pdfBase64.substring(0,100));
+    console.log({
+      length: ticket.pdfBase64.length,
+      sizeKB: (Buffer.byteLength(ticket.pdfBase64, "utf8") / 1024).toFixed(2),
+      startsWith: ticket.pdfBase64.substring(0, 10)
+    });
     console.log("=====================================");
 
 const response = await axios.post(
   "https://wa.iconicsolution.co.in/wapp/api/v2/send/bytemplate/json",
   {
     templatename: "ticket_booking",
-    mobile: phone,
+    mobile: phone.startsWith("+") ? phone : `+91${phone}`,
     dvariables: [customerName],
     medianame: ticket.fileName,
     media: ticket.pdfUrl
