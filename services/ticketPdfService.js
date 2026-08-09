@@ -59,10 +59,6 @@ exports.generateTicket = async (order) => {
     order.event?.venue ||
     "Venue not specified";
 
-  const eventType =
-    order.event?.eventType ||
-    "other";
-
   let eventDate = "TBD";
   let eventTime = "";
 
@@ -106,6 +102,16 @@ exports.generateTicket = async (order) => {
     Number(
       order.totalAmount || 0
     ).toFixed(2);
+
+  // =====================================================
+  // LOGO PATH - CHANGE THIS PATH TO YOUR LOGO
+  // =====================================================
+
+  const logoPath = path.join(
+    process.cwd(),
+    "uploads",
+    "logo.png"
+  );
 
   // =====================================================
   // CREATE PDF
@@ -282,9 +288,26 @@ exports.generateTicket = async (order) => {
       );
 
       // =================================================
-      // BORDER
+      // BLACK BACKGROUND
       // =================================================
 
+      doc
+        .rect(
+          0,
+          0,
+          doc.page.width,
+          doc.page.height
+        )
+        .fillColor(
+          "#000000"
+        )
+        .fill();
+
+      // =================================================
+      // MAIN TICKET BORDER - RED AND BLACK THEME
+      // =================================================
+
+      // Outer border with red
       doc
         .rect(
           30,
@@ -292,28 +315,78 @@ exports.generateTicket = async (order) => {
           535,
           780
         )
-        .lineWidth(1)
+        .lineWidth(2)
         .strokeColor(
-          "#2c3e50"
+          "#e01111"
+        )
+        .stroke();
+
+      // Inner border with dark gray
+      doc
+        .rect(
+          35,
+          35,
+          525,
+          770
+        )
+        .lineWidth(0.5)
+        .strokeColor(
+          "#333333"
         )
         .stroke();
 
       // =================================================
-      // HEADER
+      // TOP RED STRIP - HEADER
       // =================================================
 
+      doc
+        .rect(
+          35,
+          35,
+          525,
+          80
+        )
+        .fillColor(
+          "#e01111"
+        )
+        .fill();
+
+      // =================================================
+      // ADD LOGO (IF EXISTS)
+      // =================================================
+
+      let logoY = 45;
+      
+      if (fs.existsSync(logoPath)) {
+        try {
+          doc.image(
+            logoPath,
+            50,
+            42,
+            {
+              width: 60,
+              height: 60,
+            }
+          );
+          logoY = 55;
+        } catch (error) {
+          console.log("Logo not found, continuing without logo");
+        }
+      }
+
+      // Company name in white
       doc
         .font(
           "Helvetica-Bold"
         )
-        .fontSize(26)
+        .fontSize(20)
         .fillColor(
-          "#2980b9"
+          "#ffffff"
         )
         .text(
           "THE DJEMBE CIRCLE",
           50,
-          65,
+          48,
           {
             width: 495,
             align: "center",
@@ -324,14 +397,14 @@ exports.generateTicket = async (order) => {
         .font(
           "Helvetica"
         )
-        .fontSize(15)
+        .fontSize(12)
         .fillColor(
-          "#333333"
+          "#ffffff"
         )
         .text(
-          "EVENT TICKET",
+          "CONFIRMATION TICKET",
           50,
-          105,
+          72,
           {
             width: 495,
             align: "center",
@@ -339,147 +412,165 @@ exports.generateTicket = async (order) => {
         );
 
       // =================================================
-      // LINE
+      // DECORATIVE DOTTED LINE
       // =================================================
 
-      doc
-        .moveTo(
-          50,
-          140
-        )
-        .lineTo(
-          545,
-          140
-        )
-        .strokeColor(
-          "#2980b9"
-        )
-        .stroke();
+      for (let i = 35; i < 560; i += 5) {
+        doc
+          .rect(i, 115, 2, 5)
+          .fillColor("#e01111")
+          .fill();
+      }
 
       // =================================================
-      // BOOKING INFORMATION
+      // EVENT TITLE - PROMINENT DISPLAY
       // =================================================
 
       doc
         .font(
           "Helvetica-Bold"
         )
-        .fontSize(16)
+        .fontSize(20)
         .fillColor(
-          "#222222"
+          "#ffffff"
         )
         .text(
-          "Booking Information",
+          eventTitle.toUpperCase(),
           50,
-          170
+          135,
+          {
+            width: 495,
+            align: "center",
+          }
         );
 
-      let y = 205;
-
-      const addField =
-        (
-          label,
-          value
-        ) => {
-
-          doc
-            .font(
-              "Helvetica-Bold"
-            )
-            .fontSize(11)
-            .fillColor(
-              "#555555"
-            )
-            .text(
-              label,
-              60,
-              y
-            );
-
-          doc
-            .font(
-              "Helvetica"
-            )
-            .fontSize(12)
-            .fillColor(
-              "#111111"
-            )
-            .text(
-              String(value),
-              190,
-              y,
-              {
-                width: 340,
-              }
-            );
-
-          y += 28;
-        };
-
-      addField(
-        "Order ID",
-        order.id
-      );
-
-      addField(
-        "Customer",
-        customerName
-      );
-
-      addField(
-        "Phone",
-        customerPhone
-      );
-
-      addField(
-        "Event",
-        eventTitle
-      );
-
-      addField(
-        "Date",
-        eventDate
-      );
-
-      addField(
-        "Time",
-        eventTime
-      );
-
-      addField(
-        "Venue",
-        eventVenue
-      );
-
-      addField(
-        "Event Type",
-        eventType
-      );
-
       // =================================================
-      // TICKET DETAILS
+      // EVENT DATE & VENUE - HIGHLIGHTED
       // =================================================
 
-      y += 15;
+      let y = 175;
+
+      // Event Date Box
+      doc
+        .rect(
+          50,
+          y,
+          240,
+          55
+        )
+        .lineWidth(1)
+        .strokeColor("#e01111")
+        .stroke();
+
+      doc
+        .font(
+          "Helvetica"
+        )
+        .fontSize(8)
+        .fillColor(
+          "#888888"
+        )
+        .text(
+          "DATE",
+          60,
+          y + 5
+        );
 
       doc
         .font(
           "Helvetica-Bold"
         )
-        .fontSize(16)
+        .fontSize(14)
         .fillColor(
-          "#222222"
+          "#ffffff"
         )
         .text(
-          "Ticket Details",
+          eventDate,
+          60,
+          y + 20
+        );
+
+      // Event Venue Box
+      doc
+        .rect(
+          305,
+          y,
+          240,
+          55
+        )
+        .lineWidth(1)
+        .strokeColor("#e01111")
+        .stroke();
+
+      doc
+        .font(
+          "Helvetica"
+        )
+        .fontSize(8)
+        .fillColor(
+          "#888888"
+        )
+        .text(
+          "VENUE",
+          315,
+          y + 5
+        );
+
+      doc
+        .font(
+          "Helvetica-Bold"
+        )
+        .fontSize(12)
+        .fillColor(
+          "#ffffff"
+        )
+        .text(
+          eventVenue,
+          315,
+          y + 20,
+          {
+            width: 220,
+          }
+        );
+
+      y += 75;
+
+      // =================================================
+      // EVENT TIME
+      // =================================================
+
+      doc
+        .font(
+          "Helvetica-Bold"
+        )
+        .fontSize(10)
+        .fillColor(
+          "#888888"
+        )
+        .text(
+          "Time:",
           50,
           y
         );
 
-      y += 30;
+      doc
+        .font(
+          "Helvetica"
+        )
+        .fontSize(11)
+        .fillColor(
+          "#ffffff"
+        )
+        .text(
+          eventTime,
+          120,
+          y
+        );
+
+      y += 35;
 
       // =================================================
-      // TABLE HEADER
+      // TICKET DETAILS HEADER
       // =================================================
 
       doc
@@ -490,7 +581,43 @@ exports.generateTicket = async (order) => {
           30
         )
         .fillColor(
-          "#2980b9"
+          "#e01111"
+        )
+        .fill();
+
+      doc
+        .font(
+          "Helvetica-Bold"
+        )
+        .fontSize(11)
+        .fillColor(
+          "#ffffff"
+        )
+        .text(
+          "TICKET DETAILS",
+          50,
+          y + 8,
+          {
+            width: 495,
+            align: "center",
+          }
+        );
+
+      y += 30;
+
+      // =================================================
+      // TABLE HEADER - IMPROVED ALIGNMENT
+      // =================================================
+
+      doc
+        .rect(
+          50,
+          y,
+          495,
+          25
+        )
+        .fillColor(
+          "#1a1a1a"
         )
         .fill();
 
@@ -500,36 +627,61 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(9)
         .fillColor(
-          "#ffffff"
+          "#e01111"
         )
         .text(
-          "Ticket",
+          "TICKET TYPE",
           60,
-          y + 9
+          y + 7,
+          {
+            width: 180,
+          }
         );
 
       doc.text(
-        "Qty",
-        300,
-        y + 9
-      );
+        "QTY",
+          270,
+          y + 7,
+          {
+            width: 50,
+            align: "center",
+          }
+        );
 
       doc.text(
-        "Price",
-        350,
-        y + 9
-      );
+        "PRICE (₹)",
+          330,
+          y + 7,
+          {
+            width: 80,
+            align: "center",
+          }
+        );
 
       doc.text(
-        "Subtotal",
-        440,
-        y + 9
-      );
+        "DISCOUNT",
+          420,
+          y + 7,
+          {
+            width: 70,
+            align: "center",
+          }
+        );
 
-      y += 30;
+      doc.text(
+        "SUBTOTAL (₹)",
+          490,
+          y + 7,
+          {
+            width: 80,
+            align: "right",
+          }
+        );
+
+      y += 25;
 
       // =================================================
-      // ORDER ITEMS
+      // ORDER ITEMS - IMPROVED ALIGNMENT
       // =================================================
 
       const items =
@@ -545,7 +697,7 @@ exports.generateTicket = async (order) => {
           )
           .fontSize(11)
           .fillColor(
-            "#333333"
+            "#888888"
           )
           .text(
             "No ticket items found.",
@@ -558,7 +710,7 @@ exports.generateTicket = async (order) => {
       } else {
 
         items.forEach(
-          (item) => {
+          (item, index) => {
 
             const ticketName =
               item.ticketClass
@@ -587,17 +739,32 @@ exports.generateTicket = async (order) => {
                 0
               ).toFixed(2);
 
-            doc
-              .rect(
-                50,
-                y,
-                495,
-                35
-              )
-              .fillColor(
-                "#f5f5f5"
-              )
-              .fill();
+            // Alternate row colors
+            if (index % 2 === 0) {
+              doc
+                .rect(
+                  50,
+                  y,
+                  495,
+                  30
+                )
+                .fillColor(
+                  "#0d0d0d"
+                )
+                .fill();
+            } else {
+              doc
+                .rect(
+                  50,
+                  y,
+                  495,
+                  30
+                )
+                .fillColor(
+                  "#1a1a1a"
+                )
+                .fill();
+            }
 
             doc
               .font(
@@ -605,14 +772,14 @@ exports.generateTicket = async (order) => {
               )
               .fontSize(9)
               .fillColor(
-                "#222222"
+                "#ffffff"
               )
               .text(
                 ticketName,
                 60,
-                y + 11,
+                y + 10,
                 {
-                  width: 220,
+                  width: 180,
                 }
               );
 
@@ -620,63 +787,98 @@ exports.generateTicket = async (order) => {
               String(
                 quantity
               ),
-              300,
-              y + 11
+              270,
+              y + 10,
+              {
+                width: 50,
+                align: "center",
+              }
             );
 
             doc.text(
-              `₹${price}`,
-              350,
-              y + 11
+              `${price}`,
+              330,
+              y + 10,
+              {
+                width: 80,
+                align: "center",
+              }
             );
 
-            doc.text(
-              `₹${subtotal}`,
-              440,
-              y + 11
-            );
-
-            y += 35;
-
-            // Discount
             if (
               Number(discount) > 0
             ) {
-
-              doc
-                .fontSize(8)
-                .fillColor(
-                  "#777777"
-                )
-                .text(
-                  `Discount: ${discount}%`,
-                  60,
-                  y
-                );
-
-              y += 15;
+              doc.text(
+                `${discount}%`,
+                420,
+                y + 10,
+                {
+                  width: 70,
+                  align: "center",
+                }
+              );
+            } else {
+              doc.text(
+                "-",
+                420,
+                y + 10,
+                {
+                  width: 70,
+                  align: "center",
+                }
+              );
             }
+
+            doc.text(
+              `${subtotal}`,
+              490,
+              y + 10,
+              {
+                width: 80,
+                align: "right",
+              }
+            );
+
+            y += 30;
           }
         );
       }
 
       // =================================================
-      // TOTAL
+      // TOTAL AMOUNT - CLEAR AND PROMINENT
       // =================================================
 
-      y += 15;
+      y += 10;
+
+      // Line above total
+      doc
+        .moveTo(
+          340,
+          y
+        )
+        .lineTo(
+          540,
+          y
+        )
+        .strokeColor(
+          "#e01111"
+        )
+        .lineWidth(2)
+        .stroke();
+
+      y += 20;
 
       doc
         .font(
           "Helvetica-Bold"
         )
-        .fontSize(14)
+        .fontSize(16)
         .fillColor(
-          "#222222"
+          "#ffffff"
         )
         .text(
-          "Total Amount:",
-          300,
+          "TOTAL AMOUNT:",
+          340,
           y
         );
 
@@ -684,159 +886,294 @@ exports.generateTicket = async (order) => {
         .font(
           "Helvetica-Bold"
         )
-        .fontSize(15)
+        .fontSize(20)
         .fillColor(
-          "#2980b9"
+          "#e01111"
         )
         .text(
           `₹${totalAmount}`,
-          440,
-          y
+          490,
+          y,
+          {
+            align: "right",
+          }
         );
+
+      y += 50;
+
+      // =================================================
+      // BOOKING INFORMATION
+      // =================================================
+
+      doc
+        .rect(
+          50,
+          y,
+          495,
+          25
+        )
+        .fillColor(
+          "#e01111"
+        )
+        .fill();
+
+      doc
+        .font(
+          "Helvetica-Bold"
+        )
+        .fontSize(10)
+        .fillColor(
+          "#ffffff"
+        )
+        .text(
+          "BOOKING INFORMATION",
+          50,
+          y + 7,
+          {
+            width: 495,
+            align: "center",
+          }
+        );
+
+      y += 30;
+
+      const addField =
+        (
+          label,
+          value
+        ) => {
+
+          doc
+            .font(
+              "Helvetica-Bold"
+            )
+            .fontSize(9)
+            .fillColor(
+              "#888888"
+            )
+            .text(
+              label + ":",
+              60,
+              y
+            );
+
+          doc
+            .font(
+              "Helvetica"
+            )
+            .fontSize(10)
+            .fillColor(
+              "#ffffff"
+            )
+            .text(
+              String(value),
+              200,
+              y,
+              {
+                width: 300,
+              }
+            );
+
+          y += 22;
+        };
+
+      addField(
+        "Order ID",
+        order.id
+      );
+
+      addField(
+        "Customer",
+        customerName
+      );
+
+      addField(
+        "Phone",
+        customerPhone
+      );
+
+      y += 5;
 
       // =================================================
       // PAYMENT INFORMATION
       // =================================================
 
-      y += 45;
-
       doc
         .font(
           "Helvetica-Bold"
         )
-        .fontSize(15)
-        .fillColor(
-          "#222222"
-        )
-        .text(
-          "Payment Information",
-          50,
-          y
-        );
-
-      y += 30;
-
-      doc
-        .font(
-          "Helvetica-Bold"
-        )
-        .fontSize(10)
-        .fillColor(
-          "#555555"
-        )
-        .text(
-          "Payment Status",
-          60,
-          y
-        );
-
-      doc
-        .font(
-          "Helvetica-Bold"
-        )
-        .fontSize(11)
-        .fillColor(
-          "#27ae60"
-        )
-        .text(
-          paymentStatus.toUpperCase(),
-          190,
-          y
-        );
-
-      y += 25;
-
-      doc
-        .font(
-          "Helvetica-Bold"
-        )
-        .fontSize(10)
-        .fillColor(
-          "#555555"
-        )
-        .text(
-          "Razorpay Payment ID",
-          60,
-          y
-        );
-
-      doc
-        .font(
-          "Helvetica"
-        )
-        .fontSize(10)
-        .fillColor(
-          "#222222"
-        )
-        .text(
-          paymentId,
-          190,
-          y,
-          {
-            width: 340,
-          }
-        );
-
-      // =================================================
-      // IMPORTANT NOTE
-      // =================================================
-
-      doc
-        .font(
-          "Helvetica"
-        )
-        .fontSize(10)
-        .fillColor(
-          "#777777"
-        )
-        .text(
-          "Please carry this ticket while attending the event.",
-          50,
-          690,
-          {
-            width: 495,
-            align: "center",
-          }
-        );
-
-      doc
-        .text(
-          "Please present this ticket at the venue for entry.",
-          50,
-          710,
-          {
-            width: 495,
-            align: "center",
-          }
-        );
-
-      // =================================================
-      // FOOTER
-      // =================================================
-
-      doc
-        .moveTo(
-          50,
-          750
-        )
-        .lineTo(
-          545,
-          750
-        )
-        .strokeColor(
-          "#cccccc"
-        )
-        .stroke();
-
-      doc
         .fontSize(9)
         .fillColor(
           "#888888"
         )
         .text(
-          "Thank you for booking with The Djembe Circle.",
+          "Payment ID:",
+          60,
+          y
+        );
+
+      doc
+        .font(
+          "Helvetica"
+        )
+        .fontSize(9)
+        .fillColor(
+          "#ffffff"
+        )
+        .text(
+          paymentId,
+          200,
+          y,
+          {
+            width: 300,
+          }
+        );
+
+      y += 22;
+
+      doc
+        .font(
+          "Helvetica-Bold"
+        )
+        .fontSize(9)
+        .fillColor(
+          "#888888"
+        )
+        .text(
+          "Status:",
+          60,
+          y
+        );
+
+      const statusColor =
+        paymentStatus.toLowerCase() ===
+        "confirmed" ||
+        paymentStatus.toLowerCase() ===
+        "completed" ||
+        paymentStatus.toLowerCase() ===
+        "paid"
+          ? "#27ae60"
+          : "#e01111";
+
+      doc
+        .font(
+          "Helvetica-Bold"
+        )
+        .fontSize(10)
+        .fillColor(
+          statusColor
+        )
+        .text(
+          paymentStatus.toUpperCase(),
+          200,
+          y
+        );
+
+      y += 40;
+
+      // =================================================
+      // BOTTOM SECTION WITH TICKET NUMBER
+      // =================================================
+
+      // Dotted line separator
+      for (let i = 50; i < 545; i += 5) {
+        doc
+          .rect(i, y, 3, 3)
+          .fillColor("#333333")
+          .fill();
+      }
+
+      y += 15;
+
+      doc
+        .font(
+          "Helvetica"
+        )
+        .fontSize(8)
+        .fillColor(
+          "#666666"
+        )
+        .text(
+          "Please carry this ticket while attending the event.",
           50,
-          765,
+          y,
+          {
+            width: 495,
+            align: "center",
+          }
+        );
+
+      y += 18;
+
+      doc
+        .font(
+          "Helvetica"
+        )
+        .fontSize(8)
+        .fillColor(
+          "#666666"
+        )
+        .text(
+          "Present this ticket at the venue for entry.",
+          50,
+          y,
+          {
+            width: 495,
+            align: "center",
+          }
+        );
+
+      y += 18;
+
+      // Ticket number at bottom
+      doc
+        .font(
+          "Helvetica"
+        )
+        .fontSize(7)
+        .fillColor(
+          "#555555"
+        )
+        .text(
+          `Ticket #${order.id}`,
+          50,
+          y,
+          {
+            width: 495,
+            align: "center",
+          }
+        );
+
+      y += 15;
+
+      // =================================================
+      // RED BOTTOM BORDER - UPDATED TO 2026
+      // =================================================
+
+      doc
+        .rect(
+          35,
+          770,
+          525,
+          35
+        )
+        .fillColor(
+          "#e01111"
+        )
+        .fill();
+
+      doc
+        .font(
+          "Helvetica-Bold"
+        )
+        .fontSize(8)
+        .fillColor(
+          "#ffffff"
+        )
+        .text(
+          "THE DJEMBE CIRCLE © 2026",
+          50,
+          780,
           {
             width: 495,
             align: "center",
