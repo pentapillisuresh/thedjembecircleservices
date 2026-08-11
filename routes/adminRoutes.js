@@ -2,6 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, isAdmin } = require('../middleware/auth');
 const adminController = require('../controllers/adminController');
+const uploadController = require('../controllers/uploadController');
+const {
+  singleUpload,
+  singleVideoUpload,
+  handleMulterError
+} = require('../middleware/upload');
 
 // All routes require admin role
 router.use(authenticate, isAdmin);
@@ -79,12 +85,85 @@ router.put('/ticket-classes/:id', adminController.updateTicketClass);
 router.delete('/ticket-classes/:id', adminController.deleteTicketClass);
 
 // ==================== GALLERY MANAGEMENT ====================
-router.post('/gallery', adminController.createGalleryItem);
-router.get('/gallery', adminController.listGalleryItems);
-router.get('/gallery/:id', adminController.getGalleryItem);
-router.put('/gallery/:id', adminController.updateGalleryItem);
-router.delete('/gallery/:id', adminController.deleteGalleryItem);
-router.put('/gallery/:id/toggle', adminController.toggleGalleryActive);
+// ==================== GALLERY MANAGEMENT ====================
+
+// Upload image
+router.post(
+  '/gallery/upload',
+  singleUpload,
+  handleMulterError,
+  (req, res) => {
+    if (!req.file) {
+      return res.failure('No file uploaded', 400);
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+
+    return res.success(
+      {
+        fileUrl
+      },
+      'File uploaded successfully'
+    );
+  }
+);
+
+// Upload video
+router.post(
+  '/gallery/upload-video',
+  singleVideoUpload,
+  handleMulterError,
+  (req, res) => {
+    if (!req.file) {
+      return res.failure('No video uploaded', 400);
+    }
+
+    const fileUrl = `/uploads/${req.file.filename}`;
+
+    return res.success(
+      {
+        fileUrl
+      },
+      'Video uploaded successfully'
+    );
+  }
+);
+
+// Create gallery item
+router.post(
+  '/gallery',
+  adminController.createGalleryItem
+);
+
+// Get gallery items
+router.get(
+  '/gallery',
+  adminController.listGalleryItems
+);
+
+// Get single gallery item
+router.get(
+  '/gallery/:id',
+  adminController.getGalleryItem
+);
+
+// Update gallery item
+router.put(
+  '/gallery/:id',
+  adminController.updateGalleryItem
+);
+
+// Delete gallery item
+router.delete(
+  '/gallery/:id',
+  adminController.deleteGalleryItem
+);
+
+// Toggle gallery status
+router.put(
+  '/gallery/:id/toggle',
+  adminController.toggleGalleryActive
+);
 
 // ==================== BLOG MANAGEMENT ====================
 router.post('/blog', adminController.createBlog); // or blogController.createBlog

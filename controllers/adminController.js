@@ -1,5 +1,15 @@
 const bcrypt = require('bcryptjs');
-const { Event, TicketClass, User, Order, OrderItem, Admin, sequelize } = require('../models');
+const {
+  Event,
+  TicketClass,
+  User,
+  Order,
+  OrderItem,
+  Admin,
+  Gallery,
+  sequelize
+} = require('../models');
+
 const { Op } = require('sequelize');
 
 // ==================== DASHBOARD ====================
@@ -547,26 +557,80 @@ exports.changeAdminPin = async (req, res) => {
  */
 exports.createGalleryItem = async (req, res) => {
   try {
-    const { eventId, mediaType, mediaUrl, caption } = req.body;
+    const {
+      eventId,
+      mediaType,
+      mediaUrl,
+      caption
+    } = req.body;
 
+    // Validate required fields
     if (!mediaType || !mediaUrl) {
-      return res.failure('mediaType and mediaUrl are required', 400);
+      return res.failure(
+        'mediaType and mediaUrl are required',
+        400
+      );
     }
+
+    // Validate media type
     if (!['image', 'video'].includes(mediaType)) {
-      return res.failure('mediaType must be "image" or "video"', 400);
+      return res.failure(
+        'mediaType must be "image" or "video"',
+        400
+      );
     }
 
-    // If eventId provided, verify event exists
-    if (eventId) {
-      const event = await Event.findByPk(eventId);
-      if (!event) return res.failure('Event not found', 404);
+    // Convert empty eventId to null
+    const finalEventId = eventId || null;
+
+    // Check event exists if event selected
+    if (finalEventId) {
+      const event = await Event.findByPk(finalEventId);
+
+      if (!event) {
+        return res.failure('Event not found', 404);
+      }
     }
 
-    const item = await Gallery.create({ eventId, mediaType, mediaUrl, caption });
-    res.success(item, 'Gallery item created', 201);
+    // Determine gallery type automatically
+    const galleryType = finalEventId
+      ? 'event'
+      : 'others';
+
+    // Create gallery item
+    const item = await Gallery.create({
+      eventId: finalEventId,
+      mediaType,
+      galleryType,
+      mediaUrl,
+      caption: caption || null,
+      isActive: true
+    });
+
+    // Return created item with event details
+    const createdItem = await Gallery.findByPk(item.id, {
+      include: [
+        {
+          model: Event,
+          as: 'event',
+          attributes: ['id', 'title']
+        }
+      ]
+    });
+
+    return res.success(
+      createdItem,
+      'Gallery item created',
+      201
+    );
+
   } catch (error) {
     console.error('Create gallery item error:', error);
-    res.failure('Failed to create gallery item', 500);
+
+    return res.failure(
+      error.message || 'Failed to create gallery item',
+      500
+    );
   }
 };
 
@@ -578,18 +642,34 @@ exports.createGalleryItem = async (req, res) => {
 exports.listGalleryItems = async (req, res) => {
   try {
     const { eventId } = req.query;
+
     const where = {};
-    if (eventId) where.eventId = eventId;
+
+    if (eventId) {
+      where.eventId = eventId;
+    }
 
     const items = await Gallery.findAll({
       where,
-      include: [{ model: Event, as: 'event', attributes: ['id', 'title'] }],
+      include: [
+        {
+          model: Event,
+          as: 'event',
+          attributes: ['id', 'title']
+        }
+      ],
       order: [['createdAt', 'DESC']]
     });
-    res.success(items);
+
+    return res.success(items);
+
   } catch (error) {
     console.error('List gallery items error:', error);
-    res.failure('Failed to list gallery items', 500);
+
+    return res.failure(
+      error.message || 'Failed to list gallery items',
+      500
+    );
   }
 };
 
@@ -600,14 +680,33 @@ exports.listGalleryItems = async (req, res) => {
 exports.getGalleryItem = async (req, res) => {
   try {
     const { id } = req.params;
+
     const item = await Gallery.findByPk(id, {
-      include: [{ model: Event, as: 'event', attributes: ['id', 'title'] }]
+      include: [
+        {
+          model: Event,
+          as: 'event',
+          attributes: ['id', 'title']
+        }
+      ]
     });
-    if (!item) return res.failure('Gallery item not found', 404);
-    res.success(item);
+
+    if (!item) {
+      return res.failure(
+        'Gallery item not found',
+        404
+      );
+    }
+
+    return res.success(item);
+
   } catch (error) {
     console.error('Get gallery item error:', error);
-    res.failure('Failed to fetch gallery item', 500);
+
+    return res.failure(
+      error.message || 'Failed to fetch gallery item',
+      500
+    );
   }
 };
 
@@ -618,21 +717,91 @@ exports.getGalleryItem = async (req, res) => {
 exports.updateGalleryItem = async (req, res) => {
   try {
     const { id } = req.params;
-    const { eventId, mediaType, mediaUrl, caption } = req.body;
 
+    const {
+      eventId,
+      mediaType,
+      mediaUrl,
+      caption
+    } = req.body;
+
+    // Find existing gallery item
     const item = await Gallery.findByPk(id);
-    if (!item) return res.failure('Gallery item not found', 404);
 
-    if (eventId && eventId !== item.eventId) {
-      const event = await Event.findByPk(eventId);
-      if (!event) return res.failure('Event not found', 404);
+    if (!item) {
+      return res.failure(
+        'Gallery item not found',
+        404
+      );
     }
 
-    await item.update({ eventId, mediaType, mediaUrl, caption });
-    res.success(item, 'Gallery item updated');
+    // Validate
+    if (!mediaType || !mediaUrl) {
+      return res.failure(
+        'mediaType and mediaUrl are required',
+        400
+      );
+    }
+
+    if (!['image', 'video'].includes(mediaType)) {
+      return res.failure(
+        'mediaType must be "image" or "video"',
+        400
+      );
+    }
+
+    // Convert empty eventId to null
+    const finalEventId = eventId || null;
+
+    // Check event exists
+    if (finalEventId) {
+      const event = await Event.findByPk(finalEventId);
+
+      if (!event) {
+        return res.failure(
+          'Event not found',
+          404
+        );
+      }
+    }
+
+    // Determine gallery type
+    const galleryType = finalEventId
+      ? 'event'
+      : 'others';
+
+    // Update
+    await item.update({
+      eventId: finalEventId,
+      mediaType,
+      galleryType,
+      mediaUrl,
+      caption: caption || null
+    });
+
+    // Get updated item
+    const updatedItem = await Gallery.findByPk(id, {
+      include: [
+        {
+          model: Event,
+          as: 'event',
+          attributes: ['id', 'title']
+        }
+      ]
+    });
+
+    return res.success(
+      updatedItem,
+      'Gallery item updated'
+    );
+
   } catch (error) {
     console.error('Update gallery item error:', error);
-    res.failure('Failed to update gallery item', 500);
+
+    return res.failure(
+      error.message || 'Failed to update gallery item',
+      500
+    );
   }
 };
 
@@ -643,13 +812,30 @@ exports.updateGalleryItem = async (req, res) => {
 exports.deleteGalleryItem = async (req, res) => {
   try {
     const { id } = req.params;
+
     const item = await Gallery.findByPk(id);
-    if (!item) return res.failure('Gallery item not found', 404);
+
+    if (!item) {
+      return res.failure(
+        'Gallery item not found',
+        404
+      );
+    }
+
     await item.destroy();
-    res.success(null, 'Gallery item deleted');
+
+    return res.success(
+      null,
+      'Gallery item deleted'
+    );
+
   } catch (error) {
     console.error('Delete gallery item error:', error);
-    res.failure('Failed to delete gallery item', 500);
+
+    return res.failure(
+      error.message || 'Failed to delete gallery item',
+      500
+    );
   }
 };
 
