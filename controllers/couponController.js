@@ -206,3 +206,27 @@ exports.deleteCoupon = async (req, res) => {
     res.failure('Failed to delete coupon', 500);
   }
 };
+
+
+// Add to couponController.js
+
+/**
+ * PUT /api/admin/coupons/:id/toggle
+ * Toggle coupon active status
+ */
+exports.toggleCouponStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const coupon = await Coupon.findByPk(id);
+    if (!coupon) return res.failure('Coupon not found', 404);
+
+    await coupon.update({
+      isActive: !coupon.isActive
+    });
+    
+    res.success(coupon, `Coupon ${coupon.isActive ? 'activated' : 'deactivated'}`);
+  } catch (error) {
+    console.error('Toggle coupon status error:', error);
+    res.failure('Failed to toggle coupon status', 500);
+  }
+};

@@ -185,6 +185,8 @@ router.get('/coupons', couponController.listCoupons);
 router.get('/coupons/:id', couponController.getCoupon);
 router.put('/coupons/:id', couponController.updateCoupon);
 router.delete('/coupons/:id', couponController.deleteCoupon);
+// In adminRoutes.js
+router.put('/coupons/:id/toggle', authenticate, isAdmin, couponController.toggleCouponStatus);
 module.exports = router;
 
 
