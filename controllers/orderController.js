@@ -1,28 +1,27 @@
-const { Order, OrderItem, TicketClass, Event, User, sequelize } = require('../models');
+// controllers/orderController.js
+const { Order, OrderItem, TicketClass, Event, User, Coupon, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const razorpayService = require('../services/razorpayService');
 
 /**
  * POST /api/orders/create
  * Create a new order (booking).
- * Body: { eventId, items: [{ ticketClassId, quantity }] }
+ * Body: { eventId, items: [{ ticketClassId, quantity }], couponCode }
  * - Checks availability and calculates total with discounts.
  * - Creates order with status 'pending'.
- * - Reduces available tickets? (We'll reduce only after payment success, so keep available unchanged for now; but we can hold inventory by decrementing a "reserved" field? Simpler: reduce after payment success.)
- *   However, to avoid overselling, we need to check availability and possibly reduce temporarily. We'll reduce only after payment. This is typical: order created with pending, then payment verifies and updates inventory.
- *   So in this create, we just validate and calculate total.
+ * - Applies coupon discount if valid.
  */
 exports.createOrder = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { eventId, items } = req.body;
-    const userId = req.user.id; // from auth middleware
+    const { eventId, items, couponCode } = req.body;
+    const userId = req.user.id;
 
     if (!eventId || !items || !items.length) {
       return res.failure('Event ID and items are required', 400);
     }
 
-    // Verify event exists and is upcoming (or allow booking? we can restrict)
+    // Verify event exists and is upcoming
     const event = await Event.findByPk(eventId, { transaction: t });
     if (!event) {
       await t.rollback();
@@ -74,13 +73,74 @@ exports.createOrder = async (req, res) => {
       });
     }
 
-    // Create order
-    const order = await Order.create({
+    // ========== APPLY COUPON DISCOUNT ==========
+    let couponDiscountAmount = 0;
+    let appliedCoupon = null;
+    let finalTotal = totalAmount;
+    let couponValidationError = null;
+
+    if (couponCode) {
+      const coupon = await Coupon.findOne({ 
+        where: { code: couponCode.toUpperCase() },
+        transaction: t 
+      });
+
+      if (coupon) {
+        // Validate coupon against all rules
+        const isActive = coupon.isActive === true;
+        const isNotExpired = !coupon.expiresAt || new Date(coupon.expiresAt) > new Date();
+        const hasUsesLeft = coupon.maxUses === null || coupon.usedCount < coupon.maxUses;
+        const isEligible = coupon.eligibleUsers.includes('All') || 
+                          (coupon.eligibleUsers && coupon.eligibleUsers.includes(userId));
+        
+        // Check if user already used this coupon
+        const alreadyUsed = coupon.couponUsedUsers && 
+          coupon.couponUsedUsers.some(u => u.id === userId);
+
+        if (isActive && isNotExpired && hasUsesLeft && isEligible && !alreadyUsed) {
+          // Calculate discount
+          couponDiscountAmount = (totalAmount * coupon.discountPercentage) / 100;
+          finalTotal = totalAmount - couponDiscountAmount;
+          appliedCoupon = coupon;
+          
+          // Update coupon usage
+          const updatedUsers = [...(coupon.couponUsedUsers || [])];
+          if (!updatedUsers.some(u => u.id === userId)) {
+            updatedUsers.push({ id: userId });
+          }
+          await coupon.update({
+            usedCount: coupon.usedCount + 1,
+            couponUsedUsers: updatedUsers
+          }, { transaction: t });
+        } else {
+          // Coupon validation failed
+          let errorMsg = 'Coupon validation failed: ';
+          if (!isActive) errorMsg += 'Coupon is inactive. ';
+          if (!isNotExpired) errorMsg += 'Coupon has expired. ';
+          if (!hasUsesLeft) errorMsg += 'Coupon usage limit reached. ';
+          if (!isEligible) errorMsg += 'You are not eligible for this coupon. ';
+          if (alreadyUsed) errorMsg += 'You have already used this coupon. ';
+          couponValidationError = errorMsg.trim();
+        }
+      }
+    }
+
+    // Create order with coupon info
+    const orderData = {
       userId,
       eventId,
-      totalAmount,
+      totalAmount: finalTotal,
+      originalAmount: totalAmount,
       status: 'pending'
-    }, { transaction: t });
+    };
+
+    if (appliedCoupon) {
+      orderData.couponCode = appliedCoupon.code;
+      orderData.couponDiscountAmount = couponDiscountAmount;
+      orderData.discountPercentage = appliedCoupon.discountPercentage;
+    }
+
+    const order = await Order.create(orderData, { transaction: t });
 
     // Create order items
     for (const itemData of orderItemsData) {
@@ -94,7 +154,6 @@ exports.createOrder = async (req, res) => {
       }, { transaction: t });
     }
 
-    // (Optional) We do not reduce availableTickets here; we'll reduce after payment success.
     await t.commit();
 
     // Fetch created order with items
@@ -106,20 +165,31 @@ exports.createOrder = async (req, res) => {
       ]
     });
 
-    res.success(createdOrder, 'Order created successfully. Proceed to payment.', 201);
+    const responseData = {
+      ...createdOrder.toJSON(),
+      couponApplied: !!appliedCoupon,
+      discountAmount: couponDiscountAmount,
+      originalAmount: totalAmount
+    };
+
+    if (couponValidationError) {
+      responseData.couponValidationError = couponValidationError;
+    }
+
+    res.success(responseData, 'Order created successfully. Proceed to payment.', 201);
+
   } catch (error) {
     if (!t.finished) {
       await t.rollback();
     }
-        console.error('createOrder error:', error);
+    console.error('createOrder error:', error);
     res.failure('Failed to create order', 500);
   }
 };
 
 /**
  * GET /api/orders/:orderId
- * Get order details for the logged-in user (or admin can see all? We'll keep it for user only).
- * In the route we have authenticate, so it's user-specific; we'll ensure the user owns the order.
+ * Get order details for the logged-in user (or admin can see all).
  */
 exports.getOrder = async (req, res) => {
   try {
@@ -137,7 +207,6 @@ exports.getOrder = async (req, res) => {
     if (!order) {
       return res.failure('Order not found', 404);
     }
-    // Check if user owns the order or is admin
     if (order.userId !== userId && req.user.role !== 'admin') {
       return res.failure('Unauthorized', 403);
     }
@@ -152,7 +221,6 @@ exports.getOrder = async (req, res) => {
 /**
  * PUT /api/orders/:orderId/cancel
  * Cancel an order if it is still pending (not paid).
- * If already paid, admin must handle refund.
  */
 exports.cancelOrder = async (req, res) => {
   try {
@@ -164,20 +232,15 @@ exports.cancelOrder = async (req, res) => {
       return res.failure('Order not found', 404);
     }
 
-    // Check ownership
     if (order.userId !== userId && req.user.role !== 'admin') {
       return res.failure('Unauthorized', 403);
     }
 
-    // Only pending orders can be cancelled
     if (order.status !== 'pending') {
       return res.failure('Only pending orders can be cancelled', 400);
     }
 
     await order.update({ status: 'cancelled' });
-
-    // (Optional) If we had reserved tickets, we would release them here.
-
     res.success(order, 'Order cancelled successfully');
   } catch (error) {
     console.error('cancelOrder error:', error);
@@ -214,7 +277,6 @@ exports.requestRefund = async (req, res) => {
       return res.failure('Refund can only be requested more than 3 days before the event', 400);
     }
 
-    // Process refund via Razorpay
     if (!order.razorpayPaymentId) {
       return res.failure('No payment ID found for this order', 400);
     }
@@ -225,12 +287,7 @@ exports.requestRefund = async (req, res) => {
       `Refund requested by user ${userId}`
     );
 
-    // Update order status to refunded
     await order.update({ status: 'refunded' });
-
-    // Optionally restore ticket availability (if needed)
-    // ...
-
     res.success(refund, 'Refund processed successfully');
   } catch (error) {
     console.error('User refund error:', error);

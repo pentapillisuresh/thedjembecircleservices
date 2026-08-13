@@ -1,3 +1,4 @@
+// models/index.js
 const { Sequelize } = require('sequelize');
 const sequelize = require('../config/database');
 
@@ -8,19 +9,30 @@ const Event = require('./Event')(sequelize, Sequelize.DataTypes);
 const TicketClass = require('./TicketClass')(sequelize, Sequelize.DataTypes);
 const Order = require('./Order')(sequelize, Sequelize.DataTypes);
 const OrderItem = require('./OrderItem')(sequelize, Sequelize.DataTypes);
-const Gallery = require('./Gallery')(sequelize, Sequelize.DataTypes); // <-- new
-const Blog = require('./Blog')(sequelize, Sequelize.DataTypes); // <-- new
-const Lead = require('./Lead')(sequelize, Sequelize.DataTypes); // <-- new
-const Coupon = require('./Coupon')(sequelize, Sequelize.DataTypes); // <-- new
+const Gallery = require('./Gallery')(sequelize, Sequelize.DataTypes);
+const Blog = require('./Blog')(sequelize, Sequelize.DataTypes);
+const Lead = require('./Lead')(sequelize, Sequelize.DataTypes);
+const Coupon = require('./Coupon')(sequelize, Sequelize.DataTypes);
 
 // Define associations
 // Event <-> TicketClass
-Event.hasMany(TicketClass, { foreignKey: 'eventId', onDelete: 'CASCADE',as:"ticketClasses" });
-TicketClass.belongsTo(Event, { foreignKey: 'eventId' });
+Event.hasMany(TicketClass, { 
+  foreignKey: 'eventId', 
+  onDelete: 'CASCADE',
+  as: "ticketClasses" 
+});
+TicketClass.belongsTo(Event, { 
+  foreignKey: 'eventId' 
+});
 
 // User <-> Order
-User.hasMany(Order, { foreignKey: 'userId', onDelete: 'CASCADE' });
-Order.belongsTo(User, { foreignKey: 'userId' });
+User.hasMany(Order, { 
+  foreignKey: 'userId', 
+  onDelete: 'CASCADE' 
+});
+Order.belongsTo(User, { 
+  foreignKey: 'userId' 
+});
 
 // Event <-> Order
 Event.hasMany(Order, {
@@ -28,7 +40,6 @@ Event.hasMany(Order, {
   as: 'orders',
   onDelete: 'CASCADE'
 });
-
 Order.belongsTo(Event, {
   foreignKey: 'eventId',
   as: 'event'
@@ -40,7 +51,6 @@ Order.hasMany(OrderItem, {
   as: "items",
   onDelete: "CASCADE",
 });
-
 OrderItem.belongsTo(Order, {
   foreignKey: "orderId",
   as: "order",
@@ -52,15 +62,21 @@ TicketClass.hasMany(OrderItem, {
   as: "orderItems",
   onDelete: "CASCADE",
 });
-
 OrderItem.belongsTo(TicketClass, {
   foreignKey: "ticketClassId",
   as: "ticketClass",
 });
 
 // Gallery association
-Event.hasMany(Gallery, { foreignKey: 'eventId', as: 'galleryItems', onDelete: 'CASCADE' });
-Gallery.belongsTo(Event, { foreignKey: 'eventId', as: 'event' });
+Event.hasMany(Gallery, { 
+  foreignKey: 'eventId', 
+  as: 'galleryItems', 
+  onDelete: 'CASCADE' 
+});
+Gallery.belongsTo(Event, { 
+  foreignKey: 'eventId', 
+  as: 'event' 
+});
 
 const db = {
   sequelize,

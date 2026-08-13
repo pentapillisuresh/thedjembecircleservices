@@ -1,20 +1,16 @@
+// controllers/paymentController.js
 const razorpayService = require('../services/razorpayService');
 const whatsappService = require('../services/whatsappService');
 const ticketPdfService = require("../services/ticketPdfService");
-const { Order, OrderItem, TicketClass, Event, User, sequelize } = require('../models');
+const { Order, OrderItem, TicketClass, Event, User, Coupon, sequelize } = require('../models');
 const { Op } = require('sequelize');
 require('dotenv').config();
 
-// Check if payment and WhatsApp are enabled
 const isPaymentEnabled = process.env.PAYMENT_ENABLED === 'true';
 const isWhatsAppEnabled = process.env.WHATSAPP_ENABLED === 'true';
 
 // ======================= HELPERS =======================
 
-/**
- * Mark an order as paid, decrease ticket availability, and send WhatsApp (if enabled).
- * Used both in real and mock verification.
- */
 async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
   const t = await sequelize.transaction();
   try {
@@ -32,17 +28,18 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
     }
     if (order.status === 'paid') {
       await t.commit();
-      return; // already paid
+      return;
     }
 
-    // Update order
-    const updateData = { status: 'paid' };
+    const updateData = { 
+      status: 'paid',
+      paidAt: new Date()
+    };
     if (razorpayPaymentId) {
       updateData.razorpayPaymentId = razorpayPaymentId;
     }
     await order.update(updateData, { transaction: t });
 
-    // Decrease available tickets for each order item
     const orderItems = await OrderItem.findAll({
       where: { orderId: order.id },
       transaction: t
@@ -62,12 +59,9 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
 
     await t.commit();
 
-    // Send WhatsApp confirmation (if enabled)
     if (isWhatsAppEnabled) {
       try {
-        console.log("before Order::",order)
         const ticket = await ticketPdfService.generateTicket(order);
-
         await whatsappService.sendTicketConfirmation(
           order.User.phone,
           order.User.name,
@@ -88,9 +82,6 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
   }
 }
 
-/**
- * Update order status (used by webhook for failed payments)
- */
 async function updateOrderStatus(razorpayOrderId, status) {
   try {
     await Order.update(
@@ -107,18 +98,24 @@ async function updateOrderStatus(razorpayOrderId, status) {
 /**
  * POST /api/payment/create-order
  * Creates a Razorpay order (or mock) for a pending internal order.
- * Body: { orderId } (our order ID)
+ * Body: { orderId, couponCode }
  */
 exports.createRazorpayOrder = async (req, res) => {
   try {
-    const { orderId } = req.body;
+    const { orderId, couponCode } = req.body;
     const userId = req.user.id;
 
     if (!orderId) {
       return res.failure('Order ID is required', 400);
     }
 
-    const order = await Order.findByPk(orderId);
+    const order = await Order.findByPk(orderId, {
+      include: [
+        { model: Event, as: 'event' },
+        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClass' }] }
+      ]
+    });
+
     if (!order) {
       return res.failure('Order not found', 404);
     }
@@ -129,37 +126,85 @@ exports.createRazorpayOrder = async (req, res) => {
       return res.failure('Order is not pending', 400);
     }
 
+    // Use the already discounted total from order
+    let amountToCharge = order.totalAmount;
+
+    // If couponCode provided but not applied to order (fallback)
+    if (couponCode && !order.couponCode) {
+      const coupon = await Coupon.findOne({ where: { code: couponCode.toUpperCase() } });
+      if (coupon) {
+        const isActive = coupon.isActive === true;
+        const isNotExpired = !coupon.expiresAt || new Date(coupon.expiresAt) > new Date();
+        const hasUsesLeft = coupon.maxUses === null || coupon.usedCount < coupon.maxUses;
+        const isEligible = coupon.eligibleUsers.includes('All') || 
+                          (coupon.eligibleUsers && coupon.eligibleUsers.includes(userId));
+        const alreadyUsed = coupon.couponUsedUsers && 
+          coupon.couponUsedUsers.some(u => u.id === userId);
+
+        if (isActive && isNotExpired && hasUsesLeft && isEligible && !alreadyUsed) {
+          const originalAmount = order.originalAmount || order.totalAmount;
+          const discountAmount = (originalAmount * coupon.discountPercentage) / 100;
+          amountToCharge = originalAmount - discountAmount;
+          
+          await order.update({
+            couponCode: coupon.code,
+            couponDiscountAmount: discountAmount,
+            discountPercentage: coupon.discountPercentage,
+            totalAmount: amountToCharge,
+            originalAmount: originalAmount
+          });
+
+          const updatedUsers = [...(coupon.couponUsedUsers || [])];
+          if (!updatedUsers.some(u => u.id === userId)) {
+            updatedUsers.push({ id: userId });
+          }
+          await coupon.update({
+            usedCount: coupon.usedCount + 1,
+            couponUsedUsers: updatedUsers
+          });
+        }
+      }
+    }
+
     let razorpayOrderId;
     let key;
 
     if (!isPaymentEnabled) {
-      // MOCK MODE
       razorpayOrderId = `mock_order_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
       key = 'mock_key';
       await order.update({ razorpayOrderId });
       return res.success({
         razorpayOrderId,
-        amount: order.totalAmount,
+        amount: amountToCharge,
         key,
-        mock: true
+        mock: true,
+        couponApplied: !!order.couponCode,
+        discountAmount: order.couponDiscountAmount || 0
       }, 'Mock Razorpay order created');
     }
-    console.log("orderId::", orderId);
-    // REAL MODE
+
     const razorpayOrder = await razorpayService.createOrder(
-      order.totalAmount,
+      amountToCharge,
       'INR',
       `order_${orderId}`,
-      { orderId: order.id, userId: order.userId }
+      { 
+        orderId: order.id, 
+        userId: order.userId,
+        couponCode: order.couponCode || 'none',
+        discountAmount: order.couponDiscountAmount || 0
+      }
     );
-    console.log("razorpayOrder::", razorpayOrder);
+
     await order.update({ razorpayOrderId: razorpayOrder.id });
 
     res.success({
       razorpayOrderId: razorpayOrder.id,
-      amount: order.totalAmount,
-      key: process.env.RAZORPAY_KEY_ID
+      amount: amountToCharge,
+      key: process.env.RAZORPAY_KEY_ID,
+      couponApplied: !!order.couponCode,
+      discountAmount: order.couponDiscountAmount || 0
     }, 'Razorpay order created');
+
   } catch (error) {
     console.error('Create Razorpay order error:', error);
     res.failure('Failed to create payment order', 500);
@@ -169,7 +214,6 @@ exports.createRazorpayOrder = async (req, res) => {
 /**
  * POST /api/payment/verify
  * Verify payment signature (real) or automatically succeed (mock).
- * Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature }
  */
 exports.verifyPayment = async (req, res) => {
   try {
@@ -179,7 +223,6 @@ exports.verifyPayment = async (req, res) => {
       return res.failure('Razorpay order ID is required', 400);
     }
 
-    // Find the order
     const order = await Order.findOne({
       where: { razorpayOrderId: razorpay_order_id }
     });
@@ -189,7 +232,6 @@ exports.verifyPayment = async (req, res) => {
     }
 
     if (!isPaymentEnabled) {
-      // MOCK MODE – auto succeed
       await markOrderAsPaid(order.id, razorpay_payment_id || `mock_payment_${Date.now()}`);
       return res.success({
         verified: true,
@@ -198,7 +240,6 @@ exports.verifyPayment = async (req, res) => {
       }, 'Payment verified (mock)');
     }
 
-    // REAL MODE – verify signature
     if (!razorpay_payment_id || !razorpay_signature) {
       return res.failure('Payment ID and signature are required', 400);
     }
@@ -213,7 +254,6 @@ exports.verifyPayment = async (req, res) => {
       return res.failure('Payment signature verification failed', 400);
     }
 
-    // Mark order as paid
     await markOrderAsPaid(order.id, razorpay_payment_id);
     res.success({
       verified: true,
@@ -227,8 +267,7 @@ exports.verifyPayment = async (req, res) => {
 
 /**
  * POST /api/payment/webhook
- * Razorpay webhook endpoint (only used in real mode).
- * In mock mode, it simply returns OK.
+ * Razorpay webhook endpoint.
  */
 exports.webhookHandler = async (req, res) => {
   if (!isPaymentEnabled) {
@@ -275,8 +314,7 @@ exports.webhookHandler = async (req, res) => {
 
 /**
  * POST /api/payment/refund/:orderId
- * Admin only – refund a paid order (full or partial).
- * Body: { amount? } if omitted, full refund.
+ * Admin only – refund a paid order.
  */
 exports.refundOrder = async (req, res) => {
   try {
@@ -292,7 +330,6 @@ exports.refundOrder = async (req, res) => {
     }
 
     if (!isPaymentEnabled) {
-      // MOCK MODE
       await order.update({ status: 'refunded' });
       return res.success({
         refundId: `mock_refund_${Date.now()}`,
@@ -302,7 +339,6 @@ exports.refundOrder = async (req, res) => {
       }, 'Refund processed (mock)');
     }
 
-    // REAL MODE
     if (!order.razorpayPaymentId) {
       return res.failure('No Razorpay payment ID found', 400);
     }
@@ -315,7 +351,6 @@ exports.refundOrder = async (req, res) => {
     );
 
     await order.update({ status: 'refunded' });
-
     res.success(refund, 'Refund processed successfully');
   } catch (error) {
     console.error('Refund error:', error);
@@ -326,7 +361,6 @@ exports.refundOrder = async (req, res) => {
 /**
  * GET /api/payment/status/:orderId
  * Check payment status of an order.
- * User can check own; admin can check any.
  */
 exports.getPaymentStatus = async (req, res) => {
   try {
@@ -349,10 +383,8 @@ exports.getPaymentStatus = async (req, res) => {
         paymentDetails = await razorpayService.fetchPayment(order.razorpayPaymentId);
       } catch (pError) {
         console.error('Fetch payment error:', pError);
-        // Still return order status
       }
     } else if (!isPaymentEnabled && order.razorpayPaymentId) {
-      // Mock – return simple details
       paymentDetails = {
         id: order.razorpayPaymentId || 'mock_payment',
         amount: order.totalAmount * 100,
@@ -365,6 +397,10 @@ exports.getPaymentStatus = async (req, res) => {
       orderId: order.id,
       status: order.status,
       totalAmount: order.totalAmount,
+      originalAmount: order.originalAmount,
+      couponCode: order.couponCode,
+      couponDiscountAmount: order.couponDiscountAmount,
+      discountPercentage: order.discountPercentage,
       paymentDetails
     });
   } catch (error) {
