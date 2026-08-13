@@ -11,6 +11,7 @@ const OrderItem = require('./OrderItem')(sequelize, Sequelize.DataTypes);
 const Gallery = require('./Gallery')(sequelize, Sequelize.DataTypes); // <-- new
 const Blog = require('./Blog')(sequelize, Sequelize.DataTypes); // <-- new
 const Lead = require('./Lead')(sequelize, Sequelize.DataTypes); // <-- new
+const Coupon = require('./Coupon')(sequelize, Sequelize.DataTypes); // <-- new
 
 // Define associations
 // Event <-> TicketClass
@@ -67,6 +68,7 @@ const db = {
   User,
   Admin,
   Event,
+  Coupon,
   Lead,
   TicketClass,
   Order,

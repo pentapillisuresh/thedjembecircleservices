@@ -21,7 +21,8 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
     const order = await Order.findByPk(orderId, {
       include: [
         { model: User, as: 'User' },
-        { model: Event, as: 'event' }
+        { model: Event, as: 'event' },
+        { model: OrderItem, as: 'items', include: [{ model: TicketClass, as: 'ticketClass' }] }
       ],
       transaction: t
     });
@@ -64,6 +65,7 @@ async function markOrderAsPaid(orderId, razorpayPaymentId = null) {
     // Send WhatsApp confirmation (if enabled)
     if (isWhatsAppEnabled) {
       try {
+        console.log("before Order::",order)
         const ticket = await ticketPdfService.generateTicket(order);
 
         await whatsappService.sendTicketConfirmation(

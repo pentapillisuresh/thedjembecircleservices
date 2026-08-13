@@ -8,6 +8,7 @@ const {
   singleVideoUpload,
   handleMulterError
 } = require('../middleware/upload');
+const couponController = require('../controllers/couponController');
 
 // All routes require admin role
 router.use(authenticate, isAdmin);
@@ -177,6 +178,13 @@ router.get('/leads', adminController.listLeads);
 router.get('/leads/:id', adminController.getLead);
 router.put('/leads/:id', adminController.updateLead);
 router.delete('/leads/:id', adminController.deleteLead);
+// ==================== COUPON MANAGEMENT ====================
+// Coupon management (admin)
+router.post('/coupons', couponController.createCoupon);
+router.get('/coupons', couponController.listCoupons);
+router.get('/coupons/:id', couponController.getCoupon);
+router.put('/coupons/:id', couponController.updateCoupon);
+router.delete('/coupons/:id', couponController.deleteCoupon);
 module.exports = router;
 
 

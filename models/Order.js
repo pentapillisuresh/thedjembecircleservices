@@ -11,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
     totalAmount: { type: DataTypes.FLOAT, allowNull: false },
     status: { type: DataTypes.ENUM('pending','paid','failed','refunded'), defaultValue: 'pending' },
     razorpayOrderId: DataTypes.STRING,
+    OrderFilePath: { type:DataTypes.STRING,allowNull: true,},
     razorpayPaymentId: DataTypes.STRING,
     razorpaySignature: DataTypes.STRING
 });

@@ -5,7 +5,7 @@ module.exports = (sequelize, DataTypes) => {
         primaryKey: true,
         autoIncrement: true
     },
-      phone: { type: DataTypes.STRING(15), allowNull: false, unique: true },
+      phone: { type: DataTypes.STRING(15), allowNull: false, unique: false },
       name: { type: DataTypes.STRING, allowNull: false },
       pin: { type: DataTypes.STRING, allowNull: false }, // hashed
       email: DataTypes.STRING,

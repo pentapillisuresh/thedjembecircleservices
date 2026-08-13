@@ -42,6 +42,7 @@ app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/gallery', require('./routes/galleryRoutes'));
 app.use('/api/blog', require('./routes/blogRoutes'));
 app.use('/api/lead', require('./routes/leadRoutes'));
+app.use('/api/coupons', require('./routes/couponRoutes'));
 
 /**
  * Health Check

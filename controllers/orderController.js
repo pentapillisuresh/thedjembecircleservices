@@ -137,7 +137,6 @@ exports.getOrder = async (req, res) => {
     if (!order) {
       return res.failure('Order not found', 404);
     }
-
     // Check if user owns the order or is admin
     if (order.userId !== userId && req.user.role !== 'admin') {
       return res.failure('Unauthorized', 403);
