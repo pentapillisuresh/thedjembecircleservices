@@ -48,7 +48,7 @@ exports.getDashboardStats = async (req, res) => {
     res.failure('Failed to fetch dashboard stats', 500);
   }
 };
-
+ 
 // ==================== EVENT MANAGEMENT (CRUD) ====================
 
 /**
