@@ -207,9 +207,6 @@ exports.deleteCoupon = async (req, res) => {
   }
 };
 
-
-// Add to couponController.js
-
 /**
  * PUT /api/admin/coupons/:id/toggle
  * Toggle coupon active status
