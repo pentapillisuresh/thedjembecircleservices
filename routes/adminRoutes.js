@@ -86,7 +86,6 @@ router.put('/ticket-classes/:id', adminController.updateTicketClass);
 router.delete('/ticket-classes/:id', adminController.deleteTicketClass);
 
 // ==================== GALLERY MANAGEMENT ====================
-// ==================== GALLERY MANAGEMENT ====================
 
 // Upload image
 router.post(
