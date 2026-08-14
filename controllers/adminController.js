@@ -21,31 +21,60 @@ const { Op } = require('sequelize');
 exports.getDashboardStats = async (req, res) => {
   try {
     const totalUsers = await User.count();
+
     const totalOrders = await Order.count();
-    const paidOrders = await Order.count({ where: { status: 'paid' } });
-    const totalRevenue = await Order.sum('totalAmount', { where: { status: 'paid' } });
+
+    const paidOrders = await Order.count({
+      where: {
+        status: 'paid'
+      }
+    });
+
+    const totalRevenue = await Order.sum('totalAmount', {
+      where: {
+        status: 'paid'
+      }
+    });
 
     const ordersPerEvent = await Order.findAll({
       attributes: [
         'eventId',
-        [sequelize.fn('COUNT', sequelize.col('id')), 'orderCount'],
-        [sequelize.fn('SUM', sequelize.col('totalAmount')), 'revenue']
+        [sequelize.fn('COUNT', sequelize.col('Order.id')), 'orderCount'],
+        [sequelize.fn('SUM', sequelize.col('Order.totalAmount')), 'revenue']
       ],
-      where: { status: 'paid' },
-      group: ['eventId'],
-      include: [{ model: Event, as: 'event', attributes: ['id', 'title'] }]
+      where: {
+        status: 'paid'
+      },
+      include: [
+        {
+          model: Event,
+          as: 'event',
+          attributes: ['id', 'title']
+        }
+      ],
+      group: [
+        'Order.eventId',
+        'event.id',
+        'event.title'
+      ],
+      order: [['eventId', 'ASC']]
     });
 
-    res.success({
+    return res.success({
       totalUsers,
       totalOrders,
       paidOrders,
       totalRevenue: totalRevenue || 0,
       ordersPerEvent
     });
+
   } catch (error) {
     console.error('Dashboard error:', error);
-    res.failure('Failed to fetch dashboard stats', 500);
+
+    return res.failure(
+      error.message || 'Failed to fetch dashboard stats',
+      500
+    );
   }
 };
 
