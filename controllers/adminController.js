@@ -7,7 +7,8 @@ const {
   OrderItem,
   Admin,
   Gallery,
-  sequelize
+  sequelize,
+  Lead
 } = require('../models');
 
 const { Op } = require('sequelize');
