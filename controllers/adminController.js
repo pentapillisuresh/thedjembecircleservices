@@ -77,7 +77,7 @@ exports.getDashboardStats = async (req, res) => {
     );
   }
 };
-
+ 
 // ==================== EVENT MANAGEMENT (CRUD) ====================
 
 /**
