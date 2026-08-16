@@ -1,4 +1,5 @@
 const bcrypt = require('bcryptjs');
+const slugify = require('slugify');
 const {
   Event,
   TicketClass,
@@ -8,7 +9,8 @@ const {
   Admin,
   Gallery,
   sequelize,
-  Lead
+  Lead,
+  Blog
 } = require('../models');
 
 const { Op } = require('sequelize');
@@ -892,31 +894,79 @@ exports.toggleGalleryActive = async (req, res) => {
  */
 exports.createBlog = async (req, res) => {
   try {
-    const { title, content, excerpt, featuredImage, author, tags, status } = req.body;
+    console.log('========== CREATE BLOG ==========');
+    console.log('Request body:', req.body);
+
+    const {
+      title,
+      content,
+      excerpt,
+      featuredImage,
+      author,
+      tags,
+      status
+    } = req.body;
+
     if (!title || !content) {
       return res.failure('Title and content are required', 400);
     }
-    const slug = slugify(title, { lower: true, strict: true });
-    // check uniqueness
-    const existing = await Blog.findOne({ where: { slug } });
+
+    const slug = slugify(title, {
+      lower: true,
+      strict: true
+    });
+
+    console.log('Generated slug:', slug);
+
+    // Check slug
+    const existing = await Blog.findOne({
+      where: { slug }
+    });
+
     if (existing) {
-      return res.failure('A blog with this title already exists', 409);
+      console.log('Duplicate slug:', slug);
+      return res.failure(
+        'A blog with this title already exists',
+        409
+      );
     }
+
     const blog = await Blog.create({
       title,
       slug,
       content,
       excerpt: excerpt || content.substring(0, 200),
-      featuredImage,
+      featuredImage: featuredImage || null,
       author: author || 'Admin',
-      tags,
+      tags: tags || null,
       status: status || 'draft',
-      publishedAt: status === 'published' ? new Date() : null,
+      publishedAt:
+        status === 'published'
+          ? new Date()
+          : null
     });
-    res.success(blog, 'Blog created', 201);
+
+    console.log('Blog created successfully:', blog.id);
+
+    return res.success(
+      blog,
+      'Blog created',
+      201
+    );
+
   } catch (error) {
-    console.error('Create blog error:', error);
-    res.failure('Failed to create blog', 500);
+    console.error('========== CREATE BLOG ERROR ==========');
+    console.error('Message:', error.message);
+    console.error('Name:', error.name);
+    console.error('Original:', error.original);
+    console.error('Parent:', error.parent);
+    console.error('SQL:', error.sql);
+    console.error('Stack:', error.stack);
+
+    return res.failure(
+      error.message || 'Failed to create blog',
+      500
+    );
   }
 };
 
