@@ -58,6 +58,31 @@ exports.getEventDetails = async (req, res) => {
   }
 };
 
+exports.getEventBySlug = async (req, res) => {
+  try {
+    const { slug } = req.params;
+    const event = await Event.findOne({
+      where: { slug },
+      include: [
+        {
+          model: TicketClass,
+          as: 'ticketClasses',
+          attributes: ['id', 'name', 'price', 'discountPercentage', 'totalTickets', 'availableTickets']
+        }
+      ]
+    });
+
+    if (!event) {
+      return res.failure('Event not found', 404);
+    }
+
+    res.success(event, 'Event details retrieved');
+  } catch (error) {
+    console.error('getEventDetails error:', error);
+    res.failure('Failed to fetch event details', 500);
+  }
+};
+
 /**
  * GET /api/events
  * List events with filters: status, dateFrom, dateTo, pagination (limit, offset).

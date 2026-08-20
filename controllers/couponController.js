@@ -10,8 +10,7 @@ const { Op } = require('sequelize');
  */
 exports.validateCoupon = async (req, res) => {
   try {
-    const { code } = req.body;
-    const userId = req.user.id;
+    const { code,mobile } = req.body;
 
     if (!code) return res.failure('Coupon code required', 400);
 
@@ -32,13 +31,14 @@ exports.validateCoupon = async (req, res) => {
     }
 
     // 4. Check eligibility (user in eligibleUsers or "All")
-    const isEligible = coupon.eligibleUsers.includes('All') || coupon.eligibleUsers.includes(userId);
+    const isEligible = coupon.eligibleUsers.includes('All') || coupon.eligibleUsers.includes(mobile);
     if (!isEligible) {
       return res.failure('You are not eligible to use this coupon', 403);
     }
 
     // 5. Check if user already used it
-    const alreadyUsed = coupon.couponUsedUsers.some(u => u.id === userId);
+    console.log()
+    const alreadyUsed = coupon.couponUsedUsers.some(u => u.phoneNumber === mobile);
     if (alreadyUsed) {
       return res.failure('You have already used this coupon', 409);
     }
@@ -63,7 +63,8 @@ exports.applyCoupon = async (req, res) => {
   try {
     const { code, orderId } = req.body;
     const userId = req.user.id;
-
+    const userPhone = req.user.phone;
+    
     if (!code || !orderId) {
       return res.failure('Coupon code and order ID required', 400);
     }
@@ -89,7 +90,7 @@ exports.applyCoupon = async (req, res) => {
     if (!user) return res.failure('User not found', 404);
 
     // Update coupon: add user to used list, increment count
-    const updatedUsers = [...coupon.couponUsedUsers, { id: userId, name: user.name }];
+    const updatedUsers = [...coupon.couponUsedUsers, { phoneNumber: userPhone, name: user.name }];
     await coupon.update({
       couponUsedUsers: updatedUsers,
       usedCount: coupon.usedCount + 1,

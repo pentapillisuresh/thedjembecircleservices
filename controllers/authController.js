@@ -10,23 +10,44 @@ const { generateToken } = require('../config/auth');
  */
 exports.signup = async (req, res) => {
   try {
-    const { phone, name, pin, email } = req.body;
+    const { phone, name, email } = req.body;
+
+    const pin = "1234";
 
     // Validation
-    if (!phone || !name || !pin) {
-      return res.failure('Phone, name, and PIN are required', 400);
+    if (!phone || !name) {
+      return res.failure("Phone and name are required", 400);
     }
+
     if (phone.length < 10) {
-      return res.failure('Phone must be at least 10 digits', 400);
-    }
-    if (pin.length < 4) {
-      return res.failure('PIN must be at least 4 characters', 400);
+      return res.failure("Phone must be at least 10 digits", 400);
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ where: { phone } });
+    const existingUser = await User.findOne({
+      where: { phone }
+    });
+
     if (existingUser) {
-      return res.failure('User with this phone already exists', 409);
+      // Generate JWT token for existing user
+      const token = generateToken({
+        id: existingUser.id,
+        name: existingUser.name,
+        phone: existingUser.phone,
+        role: "user"
+      });
+
+      // Remove PIN from response
+      const { pin: _, ...userData } = existingUser.toJSON();
+
+      return res.success(
+        {
+          user: userData,
+          token
+        },
+        "User already exists. Logged in successfully",
+        200
+      );
     }
 
     // Hash PIN
@@ -44,17 +65,26 @@ exports.signup = async (req, res) => {
     // Generate JWT token
     const token = generateToken({
       id: user.id,
+      name: user.name,
       phone: user.phone,
-      role: 'user'
+      role: "user"
     });
 
-    // Return user data (without PIN)
+    // Remove PIN from response
     const { pin: _, ...userData } = user.toJSON();
-    
-    res.success({ user: userData, token }, 'User registered successfully', 201);
+
+    return res.success(
+      {
+        user: userData,
+        token
+      },
+      "User registered successfully",
+      201
+    );
+
   } catch (error) {
-    console.error('Signup error:', error);
-    res.failure('Failed to register user', 500);
+    console.error("Signup error:", error);
+    return res.failure("Failed to register user", 500);
   }
 };
 
@@ -92,6 +122,7 @@ exports.login = async (req, res) => {
     // Generate JWT token
     const token = generateToken({
       id: user.id,
+      name: user.name,
       phone: user.phone,
       role: 'user'
     });

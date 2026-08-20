@@ -28,7 +28,7 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.JSON,
         allowNull: true,
         defaultValue: [],
-        comment: 'Array of { id, name } objects',
+        comment: 'Array of { phoneNumber, Name } objects',
       },
       usedCount: {
         type: DataTypes.INTEGER,

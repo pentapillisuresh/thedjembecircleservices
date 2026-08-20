@@ -16,6 +16,7 @@ exports.createOrder = async (req, res) => {
   try {
     const { eventId, items, couponCode } = req.body;
     const userId = req.user.id;
+    const userPhone = req.user.phone;
 
     if (!eventId || !items || !items.length) {
       return res.failure('Event ID and items are required', 400);
@@ -95,7 +96,7 @@ exports.createOrder = async (req, res) => {
         
         // Check if user already used this coupon
         const alreadyUsed = coupon.couponUsedUsers && 
-          coupon.couponUsedUsers.some(u => u.id === userId);
+          coupon.couponUsedUsers.some(u => u.phoneNumber === userPhone);
 
         if (isActive && isNotExpired && hasUsesLeft && isEligible && !alreadyUsed) {
           // Calculate discount
@@ -105,8 +106,8 @@ exports.createOrder = async (req, res) => {
           
           // Update coupon usage
           const updatedUsers = [...(coupon.couponUsedUsers || [])];
-          if (!updatedUsers.some(u => u.id === userId)) {
-            updatedUsers.push({ id: userId });
+          if (!updatedUsers.some(u => u.phoneNumber === userPhone)) {
+            updatedUsers.push({ phoneNumber: userPhone });
           }
           await coupon.update({
             usedCount: coupon.usedCount + 1,

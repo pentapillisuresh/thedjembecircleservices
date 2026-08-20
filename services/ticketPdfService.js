@@ -66,24 +66,19 @@ exports.generateTicket = async (order) => {
     const eventDateObject =
       new Date(order.event.date);
 
-    eventDate =
-      eventDateObject.toLocaleDateString(
-        "en-IN",
-        {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        }
-      );
+    eventDate = eventDateObject.toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      timeZone: "Asia/Kolkata",
+    });
 
-    eventTime =
-      eventDateObject.toLocaleTimeString(
-        "en-IN",
-        {
-          hour: "2-digit",
-          minute: "2-digit",
-        }
-      );
+    eventTime = eventDateObject.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+      timeZone: "Asia/Kolkata",
+    });
   }
 
   // =====================================================
@@ -356,7 +351,7 @@ exports.generateTicket = async (order) => {
       // =================================================
 
       let logoY = 45;
-      
+
       if (fs.existsSync(logoPath)) {
         try {
           doc.image(
@@ -640,43 +635,43 @@ exports.generateTicket = async (order) => {
 
       doc.text(
         "QTY",
-          270,
-          y + 7,
-          {
-            width: 50,
-            align: "center",
-          }
-        );
+        270,
+        y + 7,
+        {
+          width: 50,
+          align: "center",
+        }
+      );
 
       doc.text(
         "PRICE",
-          330,
-          y + 7,
-          {
-            width: 80,
-            align: "center",
-          }
-        );
+        330,
+        y + 7,
+        {
+          width: 80,
+          align: "center",
+        }
+      );
 
       doc.text(
         "DISCOUNT",
-          420,
-          y + 7,
-          {
-            width: 70,
-            align: "center",
-          }
-        );
+        420,
+        y + 7,
+        {
+          width: 70,
+          align: "center",
+        }
+      );
 
       doc.text(
         "SUBTOTAL",
-          490,
-          y + 7,
-          {
-            width: 80,
-            align: "right",
-          }
-        );
+        490,
+        y + 7,
+        {
+          width: 80,
+          align: "right",
+        }
+      );
 
       y += 25;
 
@@ -1047,11 +1042,11 @@ exports.generateTicket = async (order) => {
 
       const statusColor =
         paymentStatus.toLowerCase() ===
-        "confirmed" ||
-        paymentStatus.toLowerCase() ===
-        "completed" ||
-        paymentStatus.toLowerCase() ===
-        "paid"
+          "confirmed" ||
+          paymentStatus.toLowerCase() ===
+          "completed" ||
+          paymentStatus.toLowerCase() ===
+          "paid"
           ? "#27ae60"
           : "#e01111";
 

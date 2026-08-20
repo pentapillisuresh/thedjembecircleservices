@@ -91,14 +91,14 @@ exports.getDashboardStats = async (req, res) => {
 exports.createEvent = async (req, res) => {
   const t = await sequelize.transaction();
   try {
-    const { title, description, date, venue, bannerImage, ticketClasses } = req.body;
+    const { title, description, date, venue, bannerImage, ticketClasses, amenities } = req.body;
 
     const event = await Event.create({
       title,
       description,
       date,
       venue,
-      bannerImage,
+      bannerImage,amenities,
       status: 'upcoming'
     }, { transaction: t });
 

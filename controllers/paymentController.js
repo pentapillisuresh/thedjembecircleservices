@@ -104,6 +104,7 @@ exports.createRazorpayOrder = async (req, res) => {
   try {
     const { orderId, couponCode } = req.body;
     const userId = req.user.id;
+    const userPhone = req.user.phone;
 
     if (!orderId) {
       return res.failure('Order ID is required', 400);
@@ -155,8 +156,8 @@ exports.createRazorpayOrder = async (req, res) => {
           });
 
           const updatedUsers = [...(coupon.couponUsedUsers || [])];
-          if (!updatedUsers.some(u => u.id === userId)) {
-            updatedUsers.push({ id: userId });
+          if (!updatedUsers.some(u => u.phoneNumber === userPhone)) {
+            updatedUsers.push({ phoneNumber: userPhone });
           }
           await coupon.update({
             usedCount: coupon.usedCount + 1,
