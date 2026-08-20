@@ -283,7 +283,7 @@ exports.generateTicket = async (order) => {
       );
 
       // =================================================
-      // BLACK BACKGROUND
+      // WHITE BACKGROUND
       // =================================================
 
       doc
@@ -294,12 +294,12 @@ exports.generateTicket = async (order) => {
           doc.page.height
         )
         .fillColor(
-          "#000000"
+          "#ffffff"
         )
         .fill();
 
       // =================================================
-      // MAIN TICKET BORDER - RED AND BLACK THEME
+      // MAIN TICKET BORDER - RED AND WHITE THEME
       // =================================================
 
       // Outer border with red
@@ -316,7 +316,7 @@ exports.generateTicket = async (order) => {
         )
         .stroke();
 
-      // Inner border with dark gray
+      // Inner border with light gray
       doc
         .rect(
           35,
@@ -326,7 +326,7 @@ exports.generateTicket = async (order) => {
         )
         .lineWidth(0.5)
         .strokeColor(
-          "#333333"
+          "#cccccc"
         )
         .stroke();
 
@@ -407,7 +407,7 @@ exports.generateTicket = async (order) => {
         );
 
       // =================================================
-      // DECORATIVE DOTTED LINE
+      // DECORATIVE DOTTED LINE (RED)
       // =================================================
 
       for (let i = 35; i < 560; i += 5) {
@@ -418,7 +418,7 @@ exports.generateTicket = async (order) => {
       }
 
       // =================================================
-      // EVENT TITLE - PROMINENT DISPLAY
+      // EVENT TITLE - RED
       // =================================================
 
       doc
@@ -427,7 +427,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(20)
         .fillColor(
-          "#ffffff"
+          "#e01111"
         )
         .text(
           eventTitle.toUpperCase(),
@@ -440,7 +440,7 @@ exports.generateTicket = async (order) => {
         );
 
       // =================================================
-      // EVENT DATE & VENUE - HIGHLIGHTED
+      // EVENT DATE & VENUE - RED BORDERS, BLACK TEXT
       // =================================================
 
       let y = 175;
@@ -463,7 +463,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(8)
         .fillColor(
-          "#888888"
+          "#666666"
         )
         .text(
           "DATE",
@@ -477,7 +477,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(14)
         .fillColor(
-          "#ffffff"
+          "#000000"
         )
         .text(
           eventDate,
@@ -503,7 +503,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(8)
         .fillColor(
-          "#888888"
+          "#666666"
         )
         .text(
           "VENUE",
@@ -517,7 +517,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(12)
         .fillColor(
-          "#ffffff"
+          "#000000"
         )
         .text(
           eventVenue,
@@ -531,7 +531,7 @@ exports.generateTicket = async (order) => {
       y += 75;
 
       // =================================================
-      // EVENT TIME
+      // EVENT TIME - RED LABEL, BLACK VALUE
       // =================================================
 
       doc
@@ -540,7 +540,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(10)
         .fillColor(
-          "#888888"
+          "#e01111"
         )
         .text(
           "Time:",
@@ -554,7 +554,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(11)
         .fillColor(
-          "#ffffff"
+          "#000000"
         )
         .text(
           eventTime,
@@ -565,7 +565,7 @@ exports.generateTicket = async (order) => {
       y += 35;
 
       // =================================================
-      // TICKET DETAILS HEADER
+      // TICKET DETAILS HEADER - RED BACKGROUND, WHITE TEXT
       // =================================================
 
       doc
@@ -601,7 +601,7 @@ exports.generateTicket = async (order) => {
       y += 30;
 
       // =================================================
-      // TABLE HEADER - IMPROVED ALIGNMENT
+      // TABLE HEADER - LIGHT GRAY BACKGROUND, RED TEXT
       // =================================================
 
       doc
@@ -612,7 +612,7 @@ exports.generateTicket = async (order) => {
           25
         )
         .fillColor(
-          "#1a1a1a"
+          "#f2f2f2"
         )
         .fill();
 
@@ -628,34 +628,32 @@ exports.generateTicket = async (order) => {
           "TICKET TYPE",
           60,
           y + 7,
-          {
-            width: 150,
-          }
+          { width: 160 }
         );
 
       doc.text(
         "QTY",
-        270,
+        230,
         y + 7,
         {
-          width: 50,
+          width: 40,
           align: "center",
         }
       );
 
       doc.text(
         "PRICE",
-        330,
+        280,
         y + 7,
         {
-          width: 80,
+          width: 70,
           align: "center",
         }
       );
 
       doc.text(
         "DISCOUNT",
-        420,
+        360,
         y + 7,
         {
           width: 70,
@@ -665,10 +663,10 @@ exports.generateTicket = async (order) => {
 
       doc.text(
         "SUBTOTAL",
-        490,
+        440,
         y + 7,
         {
-          width: 80,
+          width: 85,
           align: "right",
         }
       );
@@ -676,7 +674,7 @@ exports.generateTicket = async (order) => {
       y += 25;
 
       // =================================================
-      // ORDER ITEMS - IMPROVED ALIGNMENT
+      // ORDER ITEMS - ALTERNATE ROW COLORS
       // =================================================
 
       const items =
@@ -744,7 +742,7 @@ exports.generateTicket = async (order) => {
                   30
                 )
                 .fillColor(
-                  "#0d0d0d"
+                  "#f9f9f9"
                 )
                 .fill();
             } else {
@@ -756,7 +754,7 @@ exports.generateTicket = async (order) => {
                   30
                 )
                 .fillColor(
-                  "#1a1a1a"
+                  "#ffffff"
                 )
                 .fill();
             }
@@ -767,35 +765,31 @@ exports.generateTicket = async (order) => {
               )
               .fontSize(9)
               .fillColor(
-                "#ffffff"
+                "#000000"
               )
               .text(
                 ticketName,
                 60,
                 y + 10,
-                {
-                  width: 180,
-                }
+                { width: 160 }
               );
 
             doc.text(
-              String(
-                quantity
-              ),
-              270,
+              String(quantity),
+              230,
               y + 10,
               {
-                width: 50,
+                width: 40,
                 align: "center",
               }
             );
 
             doc.text(
               `${price}`,
-              330,
+              280,
               y + 10,
               {
-                width: 80,
+                width: 70,
                 align: "center",
               }
             );
@@ -805,7 +799,7 @@ exports.generateTicket = async (order) => {
             ) {
               doc.text(
                 `${discount}%`,
-                420,
+                360,
                 y + 10,
                 {
                   width: 70,
@@ -815,7 +809,7 @@ exports.generateTicket = async (order) => {
             } else {
               doc.text(
                 "-",
-                420,
+                360,
                 y + 10,
                 {
                   width: 70,
@@ -826,10 +820,10 @@ exports.generateTicket = async (order) => {
 
             doc.text(
               `${subtotal}`,
-              490,
+              440,
               y + 10,
               {
-                width: 80,
+                width: 85,
                 align: "right",
               }
             );
@@ -840,12 +834,12 @@ exports.generateTicket = async (order) => {
       }
 
       // =================================================
-      // TOTAL AMOUNT - CLEAR AND PROMINENT
+      // TOTAL AMOUNT - RED LINE, RED TOTAL
       // =================================================
 
       y += 10;
 
-      // Line above total
+      // Line above total (red)
       doc
         .moveTo(
           340,
@@ -869,7 +863,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(16)
         .fillColor(
-          "#ffffff"
+          "#000000"
         )
         .text(
           "TOTAL AMOUNT:",
@@ -897,7 +891,7 @@ exports.generateTicket = async (order) => {
       y += 50;
 
       // =================================================
-      // BOOKING INFORMATION
+      // BOOKING INFORMATION - RED HEADER, BLACK DATA
       // =================================================
 
       doc
@@ -944,7 +938,7 @@ exports.generateTicket = async (order) => {
             )
             .fontSize(9)
             .fillColor(
-              "#888888"
+              "#666666"
             )
             .text(
               label + ":",
@@ -958,7 +952,7 @@ exports.generateTicket = async (order) => {
             )
             .fontSize(10)
             .fillColor(
-              "#ffffff"
+              "#000000"
             )
             .text(
               String(value),
@@ -999,7 +993,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(9)
         .fillColor(
-          "#888888"
+          "#666666"
         )
         .text(
           "Payment ID:",
@@ -1013,7 +1007,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(9)
         .fillColor(
-          "#ffffff"
+          "#000000"
         )
         .text(
           paymentId,
@@ -1032,7 +1026,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(9)
         .fillColor(
-          "#888888"
+          "#666666"
         )
         .text(
           "Status:",
@@ -1067,14 +1061,13 @@ exports.generateTicket = async (order) => {
       y += 40;
 
       // =================================================
-      // BOTTOM SECTION WITH TICKET NUMBER
+      // BOTTOM SECTION - DOTTED LINE (GRAY)
       // =================================================
 
-      // Dotted line separator
       for (let i = 50; i < 545; i += 5) {
         doc
           .rect(i, y, 3, 3)
-          .fillColor("#333333")
+          .fillColor("#cccccc")
           .fill();
       }
 
@@ -1127,7 +1120,7 @@ exports.generateTicket = async (order) => {
         )
         .fontSize(7)
         .fillColor(
-          "#555555"
+          "#999999"
         )
         .text(
           `Ticket #${order.id}`,
