@@ -10,7 +10,7 @@ const { Op } = require('sequelize');
  */
 exports.validateCoupon = async (req, res) => {
   try {
-    const { code,mobile } = req.body;
+    const { code, mobile } = req.body;
 
     if (!code) return res.failure('Coupon code required', 400);
 
@@ -37,12 +37,22 @@ exports.validateCoupon = async (req, res) => {
     }
 
     // 5. Check if user already used it
-    console.log()
-    const alreadyUsed = coupon.couponUsedUsers.some(u => u.phoneNumber === mobile);
+    const alreadyUsed = coupon.couponUsedUsers.some((u) => {
+      console.log("phoneNumber::", u.phoneNumber);
+      console.log("mobile::", mobile);
+    
+      return String(u.phoneNumber).trim() === String(mobile).trim();
+    });
+    
+    console.log("alreadyUsed::", alreadyUsed);
+    
     if (alreadyUsed) {
-      return res.failure('You have already used this coupon', 409);
+      return res.failure(
+        "You have already used this coupon",
+        409
+      );
     }
-
+    
     res.success({
       code: coupon.code,
       discountPercentage: coupon.discountPercentage,
@@ -64,7 +74,7 @@ exports.applyCoupon = async (req, res) => {
     const { code, orderId } = req.body;
     const userId = req.user.id;
     const userPhone = req.user.phone;
-    
+
     if (!code || !orderId) {
       return res.failure('Coupon code and order ID required', 400);
     }
@@ -221,7 +231,7 @@ exports.toggleCouponStatus = async (req, res) => {
     await coupon.update({
       isActive: !coupon.isActive
     });
-    
+
     res.success(coupon, `Coupon ${coupon.isActive ? 'activated' : 'deactivated'}`);
   } catch (error) {
     console.error('Toggle coupon status error:', error);
